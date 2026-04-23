@@ -1,0 +1,1305 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dino Park Defender</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+  body { background: linear-gradient(180deg,#0f3d2e,#1a1a1a); color:#eee; min-height:100vh; padding:10px; overflow-x:hidden; }
+  h1 { text-align:center; color:#7fffa1; text-shadow:0 0 10px #2f8f4f; margin-bottom:10px; font-size:28px; }
+  #game { max-width:1320px; margin:auto; display:grid; grid-template-columns: 240px 1fr 280px; gap:10px; }
+  .panel { background:#1e2a22; border:2px solid #3b6b48; border-radius:10px; padding:10px; max-height:92vh; overflow-y:auto; }
+  .panel h2 { color:#7fffa1; font-size:15px; margin-bottom:6px; border-bottom:1px solid #3b6b48; padding-bottom:3px; }
+  button { background:#2f6b40; color:#fff; border:none; padding:6px 8px; margin:2px 0; border-radius:5px; cursor:pointer; font-size:12px; width:100%; }
+  button:hover:not(:disabled) { background:#41914f; }
+  button:disabled { background:#444; color:#888; cursor:not-allowed; }
+  .stat { display:flex; justify-content:space-between; padding:3px 0; font-size:13px; }
+  .stat span:last-child { color:#7fffa1; font-weight:bold; }
+
+  .tabs { display:flex; gap:4px; margin-bottom:8px; align-items:center; }
+  .tab { flex:1; padding:8px; background:#243a2c; border:2px solid #3b6b48; border-radius:8px 8px 0 0; cursor:pointer; text-align:center; font-weight:bold; font-size:13px; color:#aaa; }
+  .tab.active { background:#3b6b48; color:#fff; }
+  #speedToggle { background:#444; color:#fff; padding:6px 12px; border-radius:5px; cursor:pointer; font-size:12px; font-weight:bold; }
+  #speedToggle.on { background:linear-gradient(90deg,#ff8c00,#ffd700); color:#000; box-shadow:0 0 8px #ffd700; }
+
+  #arena, #parkView { position:relative; width:100%; height:580px; border:2px solid #3b6b48; border-radius:10px; overflow:hidden; }
+  #arena { background: radial-gradient(circle at 20% 30%,#1f4d35 0%,transparent 40%), radial-gradient(circle at 80% 70%,#1f4d35 0%,transparent 40%), linear-gradient(180deg,#2a5a3a,#1a3d28); }
+  #parkView { background: radial-gradient(ellipse at 30% 20%,rgba(120,180,90,.4) 0%,transparent 50%), radial-gradient(ellipse at 70% 80%,rgba(120,180,90,.4) 0%,transparent 50%), linear-gradient(180deg,#6ba85a 0%,#4d8a3e 60%,#2d5e26 100%); }
+  #parkView::before { content:''; position:absolute; inset:0; background-image: radial-gradient(circle at 15% 25%,rgba(40,80,30,.3) 1px,transparent 2px), radial-gradient(circle at 75% 35%,rgba(40,80,30,.3) 1px,transparent 2px); background-size:60px 60px; pointer-events:none; }
+
+  .tollBooth { position:absolute; left:8px; top:50%; transform:translateY(-50%); width:70px; height:90px; z-index:3; background:linear-gradient(180deg,#c0392b,#6b1f18); border:3px solid #4a1410; border-radius:6px 6px 3px 3px; box-shadow:0 4px 12px rgba(0,0,0,.5); }
+  .tollBooth::before { content:''; position:absolute; top:-8px; left:-8px; right:-8px; height:18px; background:#8b2920; clip-path:polygon(0 100%,50% 0,100% 100%); }
+  .tollBooth::after { content:'ENTRY'; position:absolute; top:14px; left:0; right:0; text-align:center; font-size:9px; color:#fff; font-weight:bold; text-shadow:1px 1px 2px #000; }
+  .tollWindow { position:absolute; top:36px; left:50%; transform:translateX(-50%); width:40px; height:30px; background:linear-gradient(180deg,#87ceeb,#4a90c2); border:2px solid #2a1810; border-radius:3px; }
+  .tollGate { position:absolute; left:78px; top:50%; transform:translateY(-50%); width:12px; height:60px; background:linear-gradient(90deg,#fff 0 4px,#c00 4px 8px,#fff 8px 12px); border:1px solid #333; z-index:2; }
+
+  .mainPath { position:absolute; background: linear-gradient(180deg,#d4b890,#a68450); box-shadow: inset 0 0 10px rgba(0,0,0,.3); }
+  .cage { position:absolute; z-index:1; background: radial-gradient(ellipse at center,rgba(80,140,60,.6) 0%,rgba(50,100,40,.7) 100%); border:4px solid #5a4a2a; border-radius:8px; box-shadow: inset 0 0 15px rgba(0,0,0,.4),0 3px 8px rgba(0,0,0,.5); overflow:hidden; }
+  .cage::before { content:''; position:absolute; inset:0; background-image: repeating-linear-gradient(90deg,transparent 0 18px,rgba(180,180,200,.55) 18px 21px); pointer-events:none; }
+  .cageLabel { position:absolute; top:-14px; left:50%; transform:translateX(-50%); background:linear-gradient(180deg,#8b6914,#6b4d10); color:#fff; padding:2px 10px; border-radius:4px; font-size:10px; font-weight:bold; border:1px solid #2a1f0a; z-index:5; text-shadow:1px 1px 1px #000; white-space:nowrap; }
+  .cageEmpty { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:rgba(255,255,255,.5); font-size:11px; font-style:italic; pointer-events:none; }
+  .cageDeco { position:absolute; pointer-events:none; opacity:.85; z-index:2; font-size:16px; }
+
+  .deco { position:absolute; pointer-events:none; user-select:none; z-index:1; }
+  .pond { position:absolute; border-radius:50%; background:radial-gradient(ellipse at 30% 30%,#87ceeb 0%,#4a90c2 60%,#2a6090 100%); box-shadow: inset 0 2px 4px rgba(255,255,255,.3); z-index:1; }
+  .path { position:absolute; top:50%; left:0; width:100%; height:50px; transform:translateY(-50%); background: repeating-linear-gradient(90deg,#8b6f47 0 20px,#7a5f3a 20px 40px); opacity:.7; }
+  .base { position:absolute; right:5px; top:50%; transform:translateY(-50%); width:60px; height:80px; background:linear-gradient(180deg,#888,#555); border:2px solid #ccc; border-radius:5px; text-align:center; line-height:80px; color:#fff; font-weight:bold; font-size:11px; }
+
+  .entity { position:absolute; transition:left .15s linear, top .15s linear; user-select:none; z-index:3; pointer-events:none; }
+  .entity.dino { cursor:pointer; pointer-events:auto; }
+  .entity.flip svg { transform: scaleX(-1); }
+  .entity .hpbar { position:absolute; top:-8px; left:0; right:0; height:4px; background:#400; border-radius:2px; overflow:hidden; }
+  .entity .hpbar > div { height:100%; background:#3f3; transition:width .2s; }
+  .entity .label { position:absolute; top:-22px; left:50%; transform:translateX(-50%); font-size:9px; color:#fff; white-space:nowrap; text-shadow:1px 1px 2px #000; background:rgba(0,0,0,.5); padding:1px 4px; border-radius:3px; }
+  .entity.stunned svg { filter: hue-rotate(180deg) brightness(.8); }
+  .entity.buffed svg { filter: drop-shadow(0 0 6px #fc4); }
+  .entity.boss svg { filter: drop-shadow(0 0 8px #f44); }
+
+  .float-text { position:absolute; font-weight:bold; font-size:14px; pointer-events:none; animation: floatUp 1s ease-out forwards; z-index:10; }
+  @keyframes floatUp { 0%{transform:translateY(0);opacity:1} 100%{transform:translateY(-40px);opacity:0} }
+
+  .card { background:#243a2c; border:1px solid #3b6b48; border-radius:6px; padding:6px; margin-bottom:5px; font-size:12px; }
+  .card .row { display:flex; justify-content:space-between; align-items:center; }
+  .card .name { font-weight:bold; color:#fff; }
+  .card .preview { display:flex; align-items:center; gap:6px; }
+  .badge { display:inline-block; padding:1px 5px; border-radius:3px; font-size:10px; margin-left:3px; font-weight:bold; }
+  .badge.common { background:#666; }
+  .badge.rare { background:#3478c8; }
+  .badge.epic { background:#9b3ec8; }
+  .badge.ancient { background:linear-gradient(45deg,#8b5a2b,#cd853f); color:#fff; }
+  .badge.legendary { background:linear-gradient(45deg,#ff8c00,#ffd700); color:#000; }
+  .badge.mythic { background:linear-gradient(45deg,#00ffff,#ff00ff,#ffff00); color:#000; }
+  .badge.dragon { background:linear-gradient(45deg,#c81e1e,#ffd700); color:#000; }
+  .xpbar { height:3px; background:#1a3a25; border-radius:2px; margin-top:2px; overflow:hidden; }
+  .xpbar > div { height:100%; background:linear-gradient(90deg,#7fffa1,#fc8); }
+  .ability-tag { display:inline-block; background:#3a2a5a; color:#fc4; padding:1px 5px; border-radius:3px; font-size:10px; margin-top:2px; }
+
+  .mini-stat { font-size:10px; color:#bbb; margin:2px 0; }
+  .mini-stat span { color:#7fffa1; }
+  .actions { display:flex; gap:3px; margin-top:4px; flex-wrap:wrap; }
+  .actions button { font-size:10px; padding:3px 5px; flex:1; min-width:48px; }
+
+  #log { background:#0d1a13; border:1px solid #2b4b35; border-radius:6px; padding:6px; height:120px; overflow-y:auto; font-size:11px; margin-top:6px; }
+  #log div { padding:1px 0; border-bottom:1px dotted #1a3a25; }
+
+  #waveBanner { text-align:center; padding:6px; background:#243a2c; border-radius:6px; margin-bottom:6px; font-weight:bold; font-size:14px; }
+  #waveBanner.boss { background:linear-gradient(90deg,#5a1a1a,#a04020,#5a1a1a); animation:pulseBoss 1s infinite; color:#ffeb88; }
+  @keyframes pulseBoss { 0%,100%{box-shadow:0 0 5px #f44} 50%{box-shadow:0 0 20px #f88} }
+
+  #modal { position:fixed; inset:0; background:rgba(0,0,0,.7); display:none; align-items:center; justify-content:center; z-index:100; }
+  #modal.show { display:flex; }
+  .modal-content { background:#1e2a22; border:2px solid #7fffa1; border-radius:10px; padding:20px; min-width:340px; max-width:460px; }
+  .modal-content h3 { color:#7fffa1; margin-bottom:10px; display:flex; align-items:center; gap:10px; }
+
+  .ability-flash svg { animation: abilityFlash .6s ease-out; }
+  @keyframes abilityFlash { 0%{filter:brightness(2) drop-shadow(0 0 12px #fc4)} 100%{filter:none} }
+
+  ::-webkit-scrollbar { width:6px; }
+  ::-webkit-scrollbar-track { background:#1a2a20; }
+  ::-webkit-scrollbar-thumb { background:#3b6b48; border-radius:3px; }
+</style>
+</head>
+<body>
+<h1>Dino Park Defender</h1>
+<div id="game">
+  <div class="panel">
+    <h2>Stats</h2>
+    <div class="stat"><span>Money</span><span id="sMoney">200</span></div>
+    <div class="stat"><span>Food</span><span id="sFood">20</span></div>
+    <div class="stat"><span>Park HP</span><span id="sHP">100/100</span></div>
+    <div class="stat"><span>Wave</span><span id="sWave">0</span></div>
+    <div class="stat"><span>Score</span><span id="sScore">0</span></div>
+    <div class="stat"><span>Armory</span><span id="sArmory">0</span></div>
+    <div class="stat"><span>Cages</span><span id="sCages">0/6</span></div>
+
+    <h2 style="margin-top:10px;">Egg Shop</h2>
+    <button onclick="buyEgg('common')">Common — 50</button>
+    <button onclick="buyEgg('rare')">Rare — 150</button>
+    <button onclick="buyEgg('epic')">Epic — 400</button>
+    <button onclick="buyEgg('ancient')">Ancient — 700</button>
+    <button onclick="buyEgg('legendary')">Legendary — 1000</button>
+    <button onclick="buyEgg('mythic')">Mythic — 2500</button>
+    <button onclick="buyEgg('dragon')" style="background:linear-gradient(45deg,#c81e1e,#ff7e1a);color:#000;font-weight:bold;">DRAGON HERO — 5000</button>
+
+    <h2 style="margin-top:10px;">Armor Shop</h2>
+    <button onclick="buyArmor('leather')">Leather — 75 (+15HP/+2DEF)</button>
+    <button onclick="buyArmor('iron')">Iron — 200 (+40HP/+5DEF)</button>
+    <button onclick="buyArmor('steel')">Steel — 500 (+90HP/+10DEF)</button>
+    <button onclick="buyArmor('dragonscale')">Dragonscale — 1200 (+200HP/+20DEF)</button>
+
+    <h2 style="margin-top:10px;">Supplies</h2>
+    <button onclick="buyFood()">Food — 20 (+10)</button>
+    <button onclick="repairBase()">Repair — 30 (+20HP)</button>
+    <button onclick="upgradeBase()">Upgrade Max HP — 100 (+25)</button>
+  </div>
+
+  <div class="panel">
+    <div class="tabs">
+      <div class="tab active" id="tabPark" onclick="switchView('park')">Zoo Park</div>
+      <div class="tab" id="tabArena" onclick="switchView('arena')">Defense Arena</div>
+      <div id="speedToggle" onclick="toggleSpeed()">&gt;&gt; 1x</div>
+    </div>
+    <div id="waveBanner">Build your zoo! Hatch dinos and welcome tourists.</div>
+    <div id="parkView"></div>
+    <div id="arena" style="display:none;">
+      <div class="path"></div>
+      <div class="base">PARK</div>
+    </div>
+    <div style="display:flex; gap:5px; margin-top:8px;">
+      <button id="btnTourist" onclick="openToTourists()">Open to Tourists</button>
+      <button id="btnWave" onclick="startWave()">Start Wave</button>
+    </div>
+    <div id="log"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Roster (max 6)</h2>
+    <div id="dinoList"></div>
+  </div>
+</div>
+
+<div id="modal" onclick="if(event.target.id==='modal')closeModal()">
+  <div class="modal-content" id="modalContent"></div>
+</div>
+
+<script>
+/* ============ DINO SVG LIBRARY ============
+   Each function returns an SVG string sized by the `size` param.
+   ViewBox is 100x70 for all so they can be swapped.
+*/
+function svgWrap(size, inner){
+  return `<svg width="${size}" height="${size*0.7}" viewBox="0 0 100 70" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
+}
+
+const DINO_SVGS = {
+  // SMALL LIZARD (Compy) - tiny bipedal
+  'Compy': (s,c='#7a9d3d')=>svgWrap(s,`
+    <ellipse cx="55" cy="48" rx="20" ry="8" fill="${c}"/>
+    <circle cx="72" cy="42" r="9" fill="${c}"/>
+    <path d="M40 50 Q20 52 12 60" stroke="${c}" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <line x1="50" y1="56" x2="48" y2="65" stroke="${c}" stroke-width="3"/>
+    <line x1="60" y1="56" x2="62" y2="65" stroke="${c}" stroke-width="3"/>
+    <circle cx="76" cy="40" r="1.5" fill="#000"/>`),
+
+  // CRESTED Dilophosaurus
+  'Dilo': (s,c='#c8a13d')=>svgWrap(s,`
+    <ellipse cx="50" cy="46" rx="22" ry="10" fill="${c}"/>
+    <circle cx="72" cy="38" r="11" fill="${c}"/>
+    <path d="M65 32 Q68 22 72 24 Q76 22 79 32" fill="#a0762a" stroke="#000" stroke-width=".5"/>
+    <path d="M30 48 Q12 54 5 64" stroke="${c}" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <line x1="44" y1="55" x2="42" y2="68" stroke="${c}" stroke-width="3"/>
+    <line x1="56" y1="55" x2="58" y2="68" stroke="${c}" stroke-width="3"/>
+    <circle cx="76" cy="36" r="1.5" fill="#000"/>`),
+
+  // OSTRICH-LIKE Gallimimus
+  'Gallimimus': (s,c='#d4a679')=>svgWrap(s,`
+    <ellipse cx="48" cy="40" rx="20" ry="9" fill="${c}"/>
+    <path d="M62 38 Q72 22 75 20 Q78 22 70 38" fill="${c}"/>
+    <ellipse cx="74" cy="20" rx="5" ry="3.5" fill="${c}"/>
+    <path d="M28 42 Q10 48 2 52" stroke="${c}" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <line x1="42" y1="48" x2="40" y2="68" stroke="${c}" stroke-width="3.5"/>
+    <line x1="54" y1="48" x2="56" y2="68" stroke="${c}" stroke-width="3.5"/>
+    <circle cx="76" cy="19" r="1.2" fill="#000"/>`),
+
+  // RAPTOR - sleek bipedal carnivore
+  'Velociraptor': (s,c='#8b5a2b')=>svgWrap(s,`
+    <ellipse cx="50" cy="44" rx="22" ry="11" fill="${c}"/>
+    <ellipse cx="72" cy="38" rx="11" ry="9" fill="${c}"/>
+    <path d="M82 38 L86 36 L82 40 Z" fill="${c}"/>
+    <path d="M28 46 Q10 48 2 60" stroke="${c}" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M44 54 L42 65 L38 65 L46 67" stroke="${c}" stroke-width="3" fill="none"/>
+    <path d="M58 54 L60 65 L56 65 L64 67" stroke="${c}" stroke-width="3" fill="none"/>
+    <circle cx="76" cy="36" r="1.5" fill="#fc0"/>
+    <line x1="40" y1="50" x2="38" y2="46" stroke="${c}" stroke-width="2"/>`),
+
+  // STEGOSAURUS - quadruped with plates
+  'Stegosaurus': (s,c='#5b8a3a')=>svgWrap(s,`
+    <ellipse cx="50" cy="48" rx="28" ry="11" fill="${c}"/>
+    <circle cx="76" cy="48" r="8" fill="${c}"/>
+    <path d="M22 50 L10 58 L18 56 L14 62" stroke="${c}" stroke-width="3" fill="none"/>
+    <polygon points="34,38 30,28 38,32" fill="#3a5a22"/>
+    <polygon points="44,34 40,22 50,28" fill="#3a5a22"/>
+    <polygon points="56,34 52,22 62,28" fill="#3a5a22"/>
+    <polygon points="66,38 62,28 70,32" fill="#3a5a22"/>
+    <line x1="34" y1="58" x2="32" y2="68" stroke="${c}" stroke-width="3.5"/>
+    <line x1="44" y1="58" x2="42" y2="68" stroke="${c}" stroke-width="3.5"/>
+    <line x1="58" y1="58" x2="60" y2="68" stroke="${c}" stroke-width="3.5"/>
+    <line x1="68" y1="58" x2="70" y2="68" stroke="${c}" stroke-width="3.5"/>
+    <circle cx="80" cy="46" r="1.2" fill="#000"/>`),
+
+  // ANKYLOSAURUS - low, armored, club tail
+  'Ankylosaurus': (s,c='#6a6a55')=>svgWrap(s,`
+    <ellipse cx="48" cy="50" rx="30" ry="12" fill="${c}"/>
+    <ellipse cx="48" cy="44" rx="28" ry="6" fill="#4a4a3a"/>
+    <circle cx="74" cy="50" r="8" fill="${c}"/>
+    <path d="M22 54 L8 56 L4 50" stroke="${c}" stroke-width="4" fill="none"/>
+    <circle cx="6" cy="52" r="6" fill="${c}"/>
+    <circle cx="34" cy="42" r="2" fill="#3a3a2a"/>
+    <circle cx="48" cy="40" r="2" fill="#3a3a2a"/>
+    <circle cx="62" cy="42" r="2" fill="#3a3a2a"/>
+    <line x1="34" y1="60" x2="32" y2="68" stroke="${c}" stroke-width="3"/>
+    <line x1="44" y1="60" x2="42" y2="68" stroke="${c}" stroke-width="3"/>
+    <line x1="54" y1="60" x2="56" y2="68" stroke="${c}" stroke-width="3"/>
+    <line x1="64" y1="60" x2="66" y2="68" stroke="${c}" stroke-width="3"/>`),
+
+  // TRICERATOPS - quadruped with horns + frill
+  'Triceratops': (s,c='#8b6a3a')=>svgWrap(s,`
+    <ellipse cx="42" cy="48" rx="26" ry="12" fill="${c}"/>
+    <path d="M62 38 Q78 30 82 42 Q82 54 70 56 Q60 56 60 48 Z" fill="${c}"/>
+    <path d="M76 28 Q88 32 84 48" fill="#a08850" stroke="#000" stroke-width=".5"/>
+    <line x1="68" y1="38" x2="76" y2="26" stroke="#fff5d9" stroke-width="3" stroke-linecap="round"/>
+    <line x1="76" y1="40" x2="84" y2="32" stroke="#fff5d9" stroke-width="3" stroke-linecap="round"/>
+    <line x1="74" y1="48" x2="82" y2="52" stroke="#fff5d9" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M16 50 L4 48" stroke="${c}" stroke-width="3" fill="none"/>
+    <line x1="28" y1="58" x2="26" y2="68" stroke="${c}" stroke-width="3.5"/>
+    <line x1="40" y1="58" x2="38" y2="68" stroke="${c}" stroke-width="3.5"/>
+    <line x1="52" y1="58" x2="54" y2="68" stroke="${c}" stroke-width="3.5"/>
+    <line x1="62" y1="58" x2="64" y2="68" stroke="${c}" stroke-width="3.5"/>
+    <circle cx="74" cy="44" r="1.2" fill="#000"/>`),
+
+  // SPINOSAURUS - bipedal with tall sail
+  'Spinosaurus': (s,c='#3a5a4a')=>svgWrap(s,`
+    <path d="M22 32 Q40 8 70 18" fill="#5a8a7a" stroke="#000" stroke-width=".5"/>
+    <ellipse cx="48" cy="42" rx="26" ry="10" fill="${c}"/>
+    <path d="M68 38 Q86 32 88 44 Q86 50 78 50 Q70 48 68 44" fill="${c}"/>
+    <path d="M22 44 Q6 48 2 56" stroke="${c}" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <line x1="40" y1="52" x2="38" y2="68" stroke="${c}" stroke-width="3.5"/>
+    <line x1="56" y1="52" x2="58" y2="68" stroke="${c}" stroke-width="3.5"/>
+    <ellipse cx="82" cy="46" rx="6" ry="2" fill="#5a8a7a"/>
+    <circle cx="82" cy="42" r="1.2" fill="#fc0"/>`),
+
+  // ALLOSAURUS - generic bipedal carnivore
+  'Allosaurus': (s,c='#a06038')=>svgWrap(s,`
+    <ellipse cx="48" cy="44" rx="24" ry="11" fill="${c}"/>
+    <path d="M68 38 Q84 32 86 42 Q86 50 74 52 Q66 50 66 44" fill="${c}"/>
+    <path d="M22 46 Q6 50 2 60" stroke="${c}" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <line x1="40" y1="54" x2="38" y2="68" stroke="${c}" stroke-width="3.5"/>
+    <line x1="56" y1="54" x2="58" y2="68" stroke="${c}" stroke-width="3.5"/>
+    <line x1="36" y1="50" x2="32" y2="56" stroke="${c}" stroke-width="2"/>
+    <path d="M82 46 L86 48 L82 50" fill="#fff"/>
+    <circle cx="80" cy="42" r="1.2" fill="#fc0"/>`),
+
+  // CARNOTAURUS - bipedal with bull horns
+  'Carnotaurus': (s,c='#a8351a')=>svgWrap(s,`
+    <ellipse cx="48" cy="44" rx="24" ry="11" fill="${c}"/>
+    <path d="M68 38 Q82 34 84 44 Q82 52 72 52 Q66 50 66 44" fill="${c}"/>
+    <path d="M72 32 L74 24" stroke="#fff5d9" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M78 32 L82 24" stroke="#fff5d9" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M22 46 Q6 50 2 60" stroke="${c}" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <line x1="40" y1="54" x2="38" y2="68" stroke="${c}" stroke-width="3.5"/>
+    <line x1="56" y1="54" x2="58" y2="68" stroke="${c}" stroke-width="3.5"/>
+    <circle cx="78" cy="42" r="1.2" fill="#fc0"/>`),
+
+  // THERIZINOSAURUS - giant claws
+  'Therizinosaurus': (s,c='#b08858')=>svgWrap(s,`
+    <ellipse cx="48" cy="44" rx="22" ry="12" fill="${c}"/>
+    <ellipse cx="68" cy="38" rx="9" ry="8" fill="${c}"/>
+    <path d="M22 46 Q6 50 2 60" stroke="${c}" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M30 50 L18 46 L14 38 L20 42" stroke="#fff5d9" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <path d="M30 54 L16 52 L10 44" stroke="#fff5d9" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <line x1="42" y1="55" x2="40" y2="68" stroke="${c}" stroke-width="3.5"/>
+    <line x1="56" y1="55" x2="58" y2="68" stroke="${c}" stroke-width="3.5"/>
+    <circle cx="72" cy="36" r="1.2" fill="#000"/>`),
+
+  // PACHYCEPHALOSAURUS - dome head
+  'Pachycephalosaurus': (s,c='#c4a878')=>svgWrap(s,`
+    <ellipse cx="48" cy="46" rx="22" ry="11" fill="${c}"/>
+    <ellipse cx="70" cy="38" rx="11" ry="10" fill="${c}"/>
+    <path d="M62 32 Q70 22 80 30" fill="#dfc498" stroke="#5a3a1a" stroke-width=".7"/>
+    <circle cx="64" cy="36" r="1" fill="#5a3a1a"/>
+    <circle cx="76" cy="36" r="1" fill="#5a3a1a"/>
+    <path d="M22 48 Q6 52 2 60" stroke="${c}" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <line x1="42" y1="56" x2="40" y2="68" stroke="${c}" stroke-width="3.5"/>
+    <line x1="56" y1="56" x2="58" y2="68" stroke="${c}" stroke-width="3.5"/>
+    <circle cx="74" cy="38" r="1.2" fill="#000"/>`),
+
+  // T-REX - large bipedal
+  'T-Rex': (s,c='#3a6a3a')=>svgWrap(s,`
+    <ellipse cx="46" cy="42" rx="26" ry="13" fill="${c}"/>
+    <path d="M68 30 Q90 28 90 44 Q88 54 74 56 Q66 54 64 44" fill="${c}"/>
+    <path d="M22 44 Q4 48 0 60" stroke="${c}" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <line x1="38" y1="54" x2="34" y2="68" stroke="${c}" stroke-width="4"/>
+    <line x1="56" y1="54" x2="60" y2="68" stroke="${c}" stroke-width="4"/>
+    <line x1="34" y1="48" x2="30" y2="52" stroke="${c}" stroke-width="2"/>
+    <path d="M84 50 L88 52 L84 54 M86 46 L90 48 M82 54 L86 56" stroke="#fff" stroke-width="1.2"/>
+    <circle cx="82" cy="40" r="1.5" fill="#fc0"/>`),
+
+  // INDOMINUS - white scaly
+  'Indominus': (s,c='#e8e0d0')=>svgWrap(s,`
+    <ellipse cx="46" cy="42" rx="26" ry="13" fill="${c}" stroke="#888" stroke-width=".5"/>
+    <path d="M68 30 Q90 28 90 44 Q88 54 74 56 Q66 54 64 44" fill="${c}" stroke="#888" stroke-width=".5"/>
+    <path d="M22 44 Q4 48 0 60" stroke="${c}" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <line x1="38" y1="54" x2="34" y2="68" stroke="${c}" stroke-width="4"/>
+    <line x1="56" y1="54" x2="60" y2="68" stroke="${c}" stroke-width="4"/>
+    <path d="M30 36 L32 32 M40 32 L42 28 M52 32 L54 28 M64 36 L66 32" stroke="#a88" stroke-width="1.5"/>
+    <path d="M84 50 L88 52 L84 54" stroke="#fc0" stroke-width="1.4"/>
+    <circle cx="82" cy="40" r="1.5" fill="#f44"/>`),
+
+  // GIGANOTOSAURUS - massive carnivore
+  'Giganotosaurus': (s,c='#5a3a1a')=>svgWrap(s,`
+    <ellipse cx="46" cy="42" rx="28" ry="14" fill="${c}"/>
+    <path d="M68 28 Q92 26 92 44 Q90 56 74 58 Q64 56 62 44" fill="${c}"/>
+    <path d="M22 44 Q2 48 0 62" stroke="${c}" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <line x1="38" y1="55" x2="34" y2="68" stroke="${c}" stroke-width="4.5"/>
+    <line x1="56" y1="55" x2="60" y2="68" stroke="${c}" stroke-width="4.5"/>
+    <path d="M82 50 L86 52 L82 54 M84 46 L88 48 M80 54 L84 56" stroke="#fff" stroke-width="1.4"/>
+    <circle cx="82" cy="40" r="1.5" fill="#fc0"/>`),
+
+  // QUETZALCOATLUS - large flying pterosaur
+  'Quetzalcoatlus': (s,c='#6a5538')=>svgWrap(s,`
+    <ellipse cx="50" cy="42" rx="14" ry="6" fill="${c}"/>
+    <path d="M50 38 Q24 16 8 22 Q22 30 36 38" fill="${c}" stroke="#3a2a18" stroke-width=".5"/>
+    <path d="M50 38 Q76 16 92 22 Q78 30 64 38" fill="${c}" stroke="#3a2a18" stroke-width=".5"/>
+    <path d="M62 40 Q80 36 84 30" stroke="${c}" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M74 36 L86 22" stroke="${c}" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <line x1="46" y1="48" x2="44" y2="58" stroke="${c}" stroke-width="2"/>
+    <line x1="54" y1="48" x2="56" y2="58" stroke="${c}" stroke-width="2"/>
+    <circle cx="80" cy="28" r="1.2" fill="#000"/>`),
+
+  // MOSASAURUS - aquatic reptile
+  'Mosasaurus': (s,c='#2c4f6e')=>svgWrap(s,`
+    <path d="M10 44 Q30 30 70 38 Q90 42 92 50 Q70 60 30 56 Q14 54 10 44 Z" fill="${c}"/>
+    <path d="M70 40 Q84 28 92 30" fill="${c}"/>
+    <path d="M2 48 L16 42 L14 52 Z" fill="${c}"/>
+    <path d="M40 56 L36 64 L46 60 Z" fill="${c}"/>
+    <path d="M60 56 L56 64 L66 60 Z" fill="${c}"/>
+    <path d="M76 44 L80 42 L78 46 M82 44 L86 42 L84 46" stroke="#fff" stroke-width="1"/>
+    <circle cx="82" cy="38" r="1.2" fill="#fc0"/>`),
+
+  // ARCHAEOPTERYX - small feathered with wings
+  'Archaeopteryx': (s,c='#7a4a2a')=>svgWrap(s,`
+    <ellipse cx="48" cy="44" rx="14" ry="7" fill="${c}"/>
+    <ellipse cx="62" cy="40" rx="6" ry="5" fill="${c}"/>
+    <path d="M68 38 L74 36 L68 41 Z" fill="#fc0"/>
+    <path d="M40 38 Q22 24 14 30 Q26 38 38 42" fill="${c}" stroke="#3a2a18" stroke-width=".5"/>
+    <path d="M50 40 Q60 56 50 64 Q44 56 46 44" fill="${c}"/>
+    <line x1="44" y1="48" x2="42" y2="58" stroke="${c}" stroke-width="2"/>
+    <line x1="52" y1="48" x2="54" y2="58" stroke="${c}" stroke-width="2"/>
+    <circle cx="64" cy="38" r="1" fill="#000"/>`),
+
+  // DRAGON - winged with horns
+  'DRAGON': (s,c='#a8201a')=>svgWrap(s,`
+    <path d="M22 32 Q40 12 70 18 L72 24 Q50 22 30 36 Z" fill="#7a1410"/>
+    <ellipse cx="50" cy="44" rx="26" ry="11" fill="${c}"/>
+    <path d="M70 36 Q88 32 90 44 Q88 52 76 54 Q68 52 68 44" fill="${c}"/>
+    <path d="M74 30 L72 22 M82 30 L84 22" stroke="#fff5d9" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M22 44 Q4 48 0 60" stroke="${c}" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M2 60 Q8 64 14 60" fill="${c}"/>
+    <line x1="40" y1="54" x2="38" y2="68" stroke="${c}" stroke-width="4"/>
+    <line x1="56" y1="54" x2="58" y2="68" stroke="${c}" stroke-width="4"/>
+    <path d="M82 46 L88 48 L82 50" fill="#fff5d9"/>
+    <circle cx="80" cy="40" r="1.5" fill="#fc0"/>`)
+};
+// Aliases / fallbacks for variant names
+DINO_SVGS['Frostwing'] = (s)=>DINO_SVGS['DRAGON'](s,'#5fb8d6');
+DINO_SVGS['Inferno']   = (s)=>DINO_SVGS['DRAGON'](s,'#d4341a');
+DINO_SVGS['Thunderscale']=(s)=>DINO_SVGS['DRAGON'](s,'#b8a020');
+DINO_SVGS['Voidmaw']   = (s)=>DINO_SVGS['DRAGON'](s,'#5a2a8a');
+
+function getDinoSVG(name, size=44){
+  const fn = DINO_SVGS[name] || DINO_SVGS['Compy'];
+  return fn(size);
+}
+
+/* Enemy SVGs */
+const ENEMY_SVGS = {
+  'Poacher': (s)=>svgWrap(s,`
+    <circle cx="50" cy="22" r="8" fill="#e8c8a0"/>
+    <rect x="44" y="18" width="12" height="4" fill="#3a2a1a"/>
+    <rect x="42" y="30" width="16" height="22" fill="#5a4a2a"/>
+    <line x1="44" y1="36" x2="36" y2="46" stroke="#5a4a2a" stroke-width="4" stroke-linecap="round"/>
+    <line x1="56" y1="36" x2="64" y2="46" stroke="#5a4a2a" stroke-width="4" stroke-linecap="round"/>
+    <line x1="46" y1="52" x2="44" y2="66" stroke="#3a2a1a" stroke-width="4" stroke-linecap="round"/>
+    <line x1="54" y1="52" x2="56" y2="66" stroke="#3a2a1a" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="48" cy="22" r="1" fill="#000"/><circle cx="52" cy="22" r="1" fill="#000"/>`),
+  'Hunter': (s)=>svgWrap(s,`
+    <circle cx="50" cy="22" r="8" fill="#e8c8a0"/>
+    <rect x="42" y="30" width="16" height="22" fill="#3a5a3a"/>
+    <line x1="58" y1="36" x2="72" y2="20" stroke="#5a3a1a" stroke-width="3"/>
+    <path d="M70 18 Q78 30 70 42" stroke="#5a3a1a" stroke-width="2" fill="none"/>
+    <line x1="44" y1="36" x2="36" y2="46" stroke="#3a5a3a" stroke-width="4" stroke-linecap="round"/>
+    <line x1="46" y1="52" x2="44" y2="66" stroke="#2a3a2a" stroke-width="4" stroke-linecap="round"/>
+    <line x1="54" y1="52" x2="56" y2="66" stroke="#2a3a2a" stroke-width="4" stroke-linecap="round"/>`),
+  'Mech': (s)=>svgWrap(s,`
+    <rect x="40" y="14" width="20" height="14" fill="#888" stroke="#333" stroke-width=".5"/>
+    <rect x="44" y="18" width="4" height="4" fill="#f00"/><rect x="52" y="18" width="4" height="4" fill="#f00"/>
+    <rect x="36" y="28" width="28" height="22" fill="#666" stroke="#333" stroke-width=".5"/>
+    <rect x="30" y="32" width="6" height="14" fill="#777"/><rect x="64" y="32" width="6" height="14" fill="#777"/>
+    <rect x="40" y="50" width="8" height="16" fill="#555"/><rect x="52" y="50" width="8" height="16" fill="#555"/>
+    <line x1="42" y1="36" x2="58" y2="36" stroke="#222" stroke-width=".7"/>`),
+  'Raider': (s)=>svgWrap(s,`
+    <path d="M40 20 Q50 12 60 20 L62 38 L38 38 Z" fill="#3a1a3a"/>
+    <circle cx="50" cy="24" r="6" fill="#e8c8a0"/>
+    <rect x="42" y="30" width="16" height="22" fill="#5a2a5a"/>
+    <line x1="56" y1="36" x2="68" y2="48" stroke="#aaa" stroke-width="2"/>
+    <line x1="44" y1="36" x2="36" y2="46" stroke="#5a2a5a" stroke-width="4" stroke-linecap="round"/>
+    <line x1="46" y1="52" x2="44" y2="66" stroke="#2a1a2a" stroke-width="4" stroke-linecap="round"/>
+    <line x1="54" y1="52" x2="56" y2="66" stroke="#2a1a2a" stroke-width="4" stroke-linecap="round"/>`)
+};
+const BOSS_SVG_ARGS = {
+  'Park Hunter Boss': ['Raider', 1.6],
+  'Mech Titan': ['Mech', 1.7],
+  'Dragon Slayer': ['Hunter', 1.6],
+  'Alien Overlord': ['Raider', 1.7]
+};
+function getEnemySVG(name, size=44){
+  const fn = ENEMY_SVGS[name];
+  if(fn) return fn(size);
+  // boss
+  const ba = BOSS_SVG_ARGS[name];
+  if(ba) return ENEMY_SVGS[ba[0]](size);
+  return ENEMY_SVGS['Poacher'](size);
+}
+function getTouristSVG(){
+  return svgWrap(28,`
+    <circle cx="50" cy="22" r="7" fill="#e8c8a0"/>
+    <rect x="43" y="29" width="14" height="20" fill="#${choice(['ff8','8ff','f8f','fc8','8f8','f88'])}"/>
+    <line x1="44" y1="34" x2="38" y2="44" stroke="#e8c8a0" stroke-width="3" stroke-linecap="round"/>
+    <line x1="56" y1="34" x2="62" y2="44" stroke="#e8c8a0" stroke-width="3" stroke-linecap="round"/>
+    <line x1="46" y1="49" x2="44" y2="64" stroke="#446" stroke-width="3.5" stroke-linecap="round"/>
+    <line x1="54" y1="49" x2="56" y2="64" stroke="#446" stroke-width="3.5" stroke-linecap="round"/>`);
+}
+
+/* ============ STATE ============ */
+const MAX_DINOS = 6;
+const STATE = {
+  money:200, food:20, hp:100, hpMax:100,
+  wave:0, score:0,
+  dinos:[], armory:[], enemies:[],
+  inWave:false, view:'park',
+  touristActive:false, touristUsedThisWave:false,
+  bossActive:false, nextId:1, speedMult:1
+};
+
+const DINO_TYPES = {
+  common:    { names:['Compy','Dilo','Gallimimus'], hpRange:[20,40], atkRange:[3,6], spdRange:[1.5,2.5], rangeRange:[60,80], cost:50, income:1 },
+  rare:      { names:['Velociraptor','Stegosaurus','Ankylosaurus'], hpRange:[60,90], atkRange:[8,14], spdRange:[1.2,2.0], rangeRange:[80,100], cost:150, income:3 },
+  epic:      { names:['Triceratops','Spinosaurus','Allosaurus'], hpRange:[120,180], atkRange:[15,25], spdRange:[1.0,1.6], rangeRange:[100,120], cost:400, income:8 },
+  ancient:   { names:['Carnotaurus','Therizinosaurus','Pachycephalosaurus'], hpRange:[180,250], atkRange:[25,40], spdRange:[0.9,1.5], rangeRange:[110,130], cost:700, income:15 },
+  legendary: { names:['T-Rex','Indominus','Giganotosaurus'], hpRange:[250,350], atkRange:[35,55], spdRange:[0.8,1.4], rangeRange:[120,150], cost:1000, income:25 },
+  mythic:    { names:['Quetzalcoatlus','Mosasaurus','Archaeopteryx'], hpRange:[500,750], atkRange:[70,100], spdRange:[0.7,1.2], rangeRange:[140,180], cost:2500, income:50 },
+  dragon:    { names:['Inferno','Frostwing','Thunderscale','Voidmaw'], hpRange:[800,1200], atkRange:[120,180], spdRange:[1.4,2.0], rangeRange:[180,220], cost:5000, income:100 }
+};
+
+const ARMOR_TYPES = {
+  leather:     { name:'Leather',     cost:75,   hp:15,  def:2 },
+  iron:        { name:'Iron',        cost:200,  hp:40,  def:5 },
+  steel:       { name:'Steel',       cost:500,  hp:90,  def:10 },
+  dragonscale: { name:'Dragonscale', cost:1200, hp:200, def:20 }
+};
+
+const ENEMY_TYPES = [
+  { name:'Poacher', hp:30,  atk:5,  spd:1.0, xp:1 },
+  { name:'Hunter',  hp:60,  atk:10, spd:1.2, xp:2 },
+  { name:'Mech',    hp:120, atk:18, spd:0.8, xp:3 },
+  { name:'Raider',  hp:200, atk:30, spd:1.0, xp:5 }
+];
+const BOSS_TYPES = [
+  { name:'Park Hunter Boss' },
+  { name:'Mech Titan' },
+  { name:'Dragon Slayer' },
+  { name:'Alien Overlord' }
+];
+
+const ABILITIES = {
+  'Compy':              { name:'Swarm Bite',  cd:4000, type:'multi',  hits:3, mult:0.7, desc:'3 quick bites' },
+  'Dilo':               { name:'Venom Spit',  cd:5000, type:'dot',    dmg:0.4, dur:4000, desc:'Poison DoT 4s' },
+  'Gallimimus':         { name:'Sprint',      cd:6000, type:'buff',   mult:1.6, dur:3000, desc:'+60% atk for 3s' },
+  'Velociraptor':       { name:'Pounce',      cd:5000, type:'pounce', mult:2.5, desc:'Leap, 2.5x dmg' },
+  'Stegosaurus':        { name:'Tail Swipe',  cd:6000, type:'aoe',    radius:80, mult:1.3, desc:'AoE around self' },
+  'Ankylosaurus':       { name:'Club Slam',   cd:7000, type:'aoe',    radius:90, mult:1.5, stun:1500, desc:'AoE + stun' },
+  'Triceratops':        { name:'Charge',      cd:8000, type:'line',   length:220, mult:2.0, desc:'Line dash dmg' },
+  'Spinosaurus':        { name:'Water Blast', cd:6000, type:'line',   length:260, mult:1.6, desc:'Pierce line' },
+  'Allosaurus':         { name:'Frenzy',      cd:7000, type:'buff',   mult:2.0, dur:3000, desc:'2x atk for 3s' },
+  'Carnotaurus':        { name:'Gore Rush',   cd:6000, type:'pounce', mult:2.0, dot:true, desc:'Pounce + bleed' },
+  'Therizinosaurus':    { name:'Slash Storm', cd:7000, type:'multi',  hits:5, mult:0.8, desc:'5 fast slashes' },
+  'Pachycephalosaurus': { name:'Headbutt',    cd:6000, type:'pounce', mult:1.6, knockback:60, stun:1000, desc:'Knockback stun' },
+  'T-Rex':              { name:'Terror Roar', cd:8000, type:'aoe',    radius:130, mult:1.4, stun:2000, desc:'Big AoE stun' },
+  'Indominus':          { name:'Camo Strike', cd:7000, type:'crit',   mult:4.0, desc:'4x crit' },
+  'Giganotosaurus':     { name:'Bone Crush',  cd:8000, type:'crit',   mult:3.0, pierce:true, desc:'Crit + chain' },
+  'Quetzalcoatlus':     { name:'Dive Bomb',   cd:6000, type:'aoe',    radius:110, mult:2.0, desc:'Aerial AoE' },
+  'Mosasaurus':         { name:'Tidal Wave',  cd:8000, type:'aoe',    radius:160, mult:2.5, desc:'Massive AoE' },
+  'Archaeopteryx':      { name:'Wing Storm',  cd:5000, type:'multi',  hits:4, mult:1.0, desc:'4 air hits' },
+  'Inferno':            { name:'Fire Storm',  cd:6000, type:'aoe',    radius:150, mult:2.5, desc:'Huge fire AoE' },
+  'Frostwing':          { name:'Ice Blast',   cd:6000, type:'aoe',    radius:130, mult:2.0, stun:2500, desc:'AoE freeze' },
+  'Thunderscale':       { name:'Lightning',   cd:5000, type:'multi',  hits:6, mult:1.2, desc:'Chain bolts' },
+  'Voidmaw':            { name:'Void Rift',   cd:7000, type:'crit',   mult:6.0, desc:'6x void crit' }
+};
+
+/* ============ UTIL ============ */
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const rndi=(a,b)=>Math.floor(rnd(a,b+1));
+const choice=a=>a[Math.floor(Math.random()*a.length)];
+const fmt=n=>Math.floor(n);
+function log(msg,color='#bdf'){
+  const el=document.getElementById('log'); const d=document.createElement('div');
+  d.style.color=color; d.innerHTML=msg; el.prepend(d);
+  while(el.children.length>40) el.removeChild(el.lastChild);
+}
+function pay(a){ if(STATE.money<a){log(`Not enough money (need ${a})`,'#f88');return false;} STATE.money-=a; return true; }
+function xpForNext(level){ return 5 + level*3; }
+function effAtk(d){ const now=Date.now(); return (d.buffUntil&&now<d.buffUntil) ? Math.floor(d.atk*d.buffMult) : d.atk; }
+
+/* ============ SPEED ============ */
+function toggleSpeed(){
+  STATE.speedMult = STATE.speedMult===1 ? 2 : 1;
+  const el=document.getElementById('speedToggle');
+  el.textContent = STATE.speedMult===2 ? '>> 2x' : '>> 1x';
+  el.classList.toggle('on', STATE.speedMult===2);
+  log(`Game speed: ${STATE.speedMult}x`,'#fc8');
+}
+
+/* ============ ECONOMY ============ */
+function buyFood(){ if(pay(20)){STATE.food+=10;log('+10 food');updateStats();} }
+function repairBase(){ if(STATE.hp>=STATE.hpMax){log('Already full HP','#fa6');return;} if(pay(30)){STATE.hp=Math.min(STATE.hpMax,STATE.hp+20);log('Park repaired');updateStats();} }
+function upgradeBase(){ if(pay(100)){STATE.hpMax+=25;STATE.hp+=25;log('Max HP +25');updateStats();} }
+
+/* ============ EGGS ============ */
+function buyEgg(rarity){
+  if(STATE.dinos.length>=MAX_DINOS){ log(`Max ${MAX_DINOS} dinos! Sell one first.`,'#f88'); return; }
+  const t=DINO_TYPES[rarity]; if(!pay(t.cost))return;
+  const idx=Math.floor(Math.random()*t.names.length);
+  const name=t.names[idx];
+  const dino={
+    id:STATE.nextId++, rarity, name,
+    hpMax:rndi(t.hpRange[0],t.hpRange[1]),
+    atk:rndi(t.atkRange[0],t.atkRange[1]),
+    spd:+rnd(t.spdRange[0],t.spdRange[1]).toFixed(2),
+    range:rndi(t.rangeRange[0],t.rangeRange[1]),
+    level:1, xp:0, armor:null,
+    x:0,y:0, homeX:0,homeY:0,homeW:0,homeH:0,
+    vx:rnd(-.8,.8), vy:rnd(-.8,.8),
+    facing:1, lastAtk:0, lastAbility:0,
+    buffUntil:0, buffMult:1,
+    isDragon:rarity==='dragon',
+    ability: ABILITIES[name] ? name : null
+  };
+  dino.hp=dino.hpMax;
+  STATE.dinos.push(dino);
+  assignCages();
+  log(`Hatched <b>${dino.name}</b> (${rarity})${dino.ability?' — '+ABILITIES[name].name:''}!`,'#7fffa1');
+  updateStats(); renderDinos(); renderPark();
+}
+
+/* ============ ARMOR ============ */
+function buyArmor(t){
+  const a=ARMOR_TYPES[t]; if(!pay(a.cost))return;
+  STATE.armory.push({id:STATE.nextId++,type:t});
+  log(`${a.name} armor purchased`,'#9cf'); updateStats();
+}
+function openArmorPicker(id){
+  const d=STATE.dinos.find(x=>x.id===id); if(!d)return;
+  let html=`<h3>Equip ${d.name}</h3>`;
+  if(d.armor){
+    const a=ARMOR_TYPES[d.armor];
+    html+=`<p style="margin:6px 0;color:#9cf;">Equipped: ${a.name}</p>`;
+    html+=`<button onclick="unequipArmor(${d.id})">Unequip</button>`;
+  }
+  if(STATE.armory.length===0) html+='<p style="margin:8px 0;color:#888;">Armory empty.</p>';
+  else { html+='<p style="margin:8px 0;">Choose armor:</p>';
+    STATE.armory.forEach(a=>{const A=ARMOR_TYPES[a.type]; html+=`<button onclick="equipArmor(${d.id},${a.id})">${A.name} (+${A.hp}HP/+${A.def}DEF)</button>`;});
+  }
+  html+='<button style="background:#666;margin-top:10px;" onclick="closeModal()">Close</button>';
+  document.getElementById('modalContent').innerHTML=html;
+  document.getElementById('modal').classList.add('show');
+}
+function equipArmor(id,aid){
+  const d=STATE.dinos.find(x=>x.id===id); const arm=STATE.armory.find(a=>a.id===aid);
+  if(!d||!arm)return;
+  if(d.armor) STATE.armory.push({id:STATE.nextId++,type:d.armor});
+  d.armor=arm.type; const b=ARMOR_TYPES[arm.type].hp; d.hpMax+=b; d.hp+=b;
+  STATE.armory=STATE.armory.filter(a=>a.id!==aid);
+  log(`${d.name} equipped ${ARMOR_TYPES[arm.type].name}`,'#9cf');
+  closeModal(); renderDinos(); updateStats();
+}
+function unequipArmor(id){
+  const d=STATE.dinos.find(x=>x.id===id); if(!d||!d.armor)return;
+  const a=ARMOR_TYPES[d.armor]; STATE.armory.push({id:STATE.nextId++,type:d.armor});
+  d.hpMax-=a.hp; d.hp=Math.min(d.hp,d.hpMax); d.armor=null;
+  closeModal(); renderDinos(); updateStats();
+}
+
+/* ============ LEVEL UP & TRAINING ============ */
+function applyLevelUp(d, source){
+  d.level++; d.xp = 0;
+  d.atk = Math.floor(d.atk * 1.25);
+  d.hpMax = Math.floor(d.hpMax * 1.20);
+  d.hp = d.hpMax;
+  d.range += 5;
+  d.spd = +(d.spd * 1.05).toFixed(2);
+  log(`${d.name} -> L${d.level} ${source==='combat'?'(combat)':'(training)'}`,'#7fffa1');
+}
+function trainDino(id){
+  const d=STATE.dinos.find(x=>x.id===id); if(!d)return;
+  const cost=50*d.level; if(!pay(cost))return;
+  applyLevelUp(d,'training'); updateStats(); renderDinos();
+}
+function trainSpeed(id){
+  const d=STATE.dinos.find(x=>x.id===id); if(!d)return;
+  const cost=40*d.level; if(!pay(cost))return;
+  d.spd = +(d.spd * 1.12).toFixed(2);
+  log(`${d.name} +12% speed -> ${d.spd}`,'#fc8');
+  updateStats(); renderDinos();
+}
+function trainRange(id){
+  const d=STATE.dinos.find(x=>x.id===id); if(!d)return;
+  const cost=40*d.level; if(!pay(cost))return;
+  d.range += 15;
+  log(`${d.name} +15 range -> ${d.range}`,'#fc8');
+  updateStats(); renderDinos();
+}
+function feedDino(id){
+  const d=STATE.dinos.find(x=>x.id===id); if(!d)return;
+  if(STATE.food<5){log('Not enough food','#f88');return;}
+  STATE.food-=5; d.hp=Math.min(d.hpMax,d.hp+Math.floor(d.hpMax*.4));
+  log(`Fed ${d.name}`); updateStats(); renderDinos();
+}
+function sellDino(id){
+  const d=STATE.dinos.find(x=>x.id===id); if(!d)return;
+  const v=Math.floor(DINO_TYPES[d.rarity].cost*.5*d.level); STATE.money+=v;
+  if(d.armor) STATE.armory.push({id:STATE.nextId++,type:d.armor});
+  STATE.dinos=STATE.dinos.filter(x=>x.id!==id);
+  log(`Sold ${d.name} for ${v}`,'#fc8');
+  assignCages(); updateStats(); renderDinos(); renderPark();
+}
+
+/* ============ TOURISTS ============ */
+function openToTourists(){
+  if(STATE.inWave){log('Cannot host during wave','#fa6');return;}
+  if(STATE.touristActive){log('Tourists already here','#fa6');return;}
+  if(STATE.touristUsedThisWave){log('Already hosted this wave!','#fa6');return;}
+  if(STATE.dinos.length===0){log('No dinos to attract tourists','#fa6');return;}
+  if(STATE.view!=='park') switchView('park');
+
+  STATE.touristActive=true;
+  let elapsed=0,totalMoney=0,totalFood=0,totalTourists=0;
+  const dur=15000;
+  const mult={common:1,rare:3,epic:8,ancient:15,legendary:25,mythic:50,dragon:100};
+  const attract=STATE.dinos.reduce((s,d)=>s+mult[d.rarity]*d.level,0);
+  log(`Park opened! Attractiveness: ${attract}`,'#fc8');
+
+  const iv=setInterval(()=>{
+    elapsed+=500/STATE.speedMult;
+    const burst=Math.max(1,Math.floor(attract/8));
+    for(let i=0;i<Math.min(burst,5);i++) spawnTourist();
+    STATE.dinos.forEach(d=>{
+      const inc=DINO_TYPES[d.rarity].income*d.level;
+      totalMoney+=inc; STATE.money+=inc;
+      if(Math.random()<.3){totalFood++;STATE.food++;}
+    });
+    totalTourists+=burst;
+    updateStats();
+    if(elapsed>=dur){
+      clearInterval(iv); STATE.touristActive=false; STATE.touristUsedThisWave=true;
+      log(`Park closed! ${totalTourists} guests -> +${totalMoney} money +${totalFood} food`,'#7fffa1');
+      updateStats();
+    }
+  }, 500/STATE.speedMult);
+}
+
+function spawnTourist(){
+  if(STATE.view!=='park')return;
+  const park=document.getElementById('parkView');
+  const W=park.offsetWidth, H=park.offsetHeight, midY=H/2 - 12;
+  const t=document.createElement('div');
+  t.className='entity tourist';
+  t.innerHTML = getTouristSVG();
+  t.style.left='90px'; t.style.top=midY+'px'; t.style.zIndex='4';
+  park.appendChild(t);
+
+  const cages = getCages();
+  const stops = [];
+  const visits = cages.filter(()=>Math.random()<0.45).slice(0,2)
+    .sort((a,b)=>(a.x+a.w/2)-(b.x+b.w/2));
+  visits.forEach(c=>{
+    const cx = c.x + c.w/2;
+    stops.push({x:cx, y:midY});
+    stops.push({x:cx, y:c.y + c.h/2});
+    stops.push({x:cx, y:c.y + c.h/2, pause:1200/STATE.speedMult, viewing:c});
+    stops.push({x:cx, y:midY});
+  });
+  stops.push({x:W-30, y:midY});
+
+  let i=0;
+  const step = ()=>{
+    if(i>=stops.length){ t.remove(); return; }
+    const s=stops[i++];
+    const cx=parseFloat(t.style.left), cy=parseFloat(t.style.top);
+    const dist=Math.hypot(Math.abs(cx-s.x),Math.abs(cy-s.y));
+    const dur = Math.max(0.15, dist/120) / STATE.speedMult;
+    t.style.transition=`left ${dur}s linear, top ${dur}s linear`;
+    requestAnimationFrame(()=>{ t.style.left=s.x+'px'; t.style.top=s.y+'px'; });
+    setTimeout(()=>{
+      if(s.viewing){
+        const c=document.createElement('div'); c.className='float-text'; c.textContent='+$';
+        c.style.left=s.x+'px'; c.style.top=(s.y-10)+'px'; c.style.color='#ffd700';
+        park.appendChild(c); setTimeout(()=>c.remove(),1000);
+      }
+      setTimeout(step, s.pause||0);
+    }, dur*1000+50);
+  };
+  step();
+}
+
+/* ============ ZOO LAYOUT ============ */
+function getCages(){
+  const W=document.getElementById('parkView').offsetWidth || 740;
+  const H=document.getElementById('parkView').offsetHeight || 580;
+  const startX=130, usableW=W-startX-20, usableH=H-60;
+  const cols=3, rows=2, gap=18;
+  const cw=(usableW-gap*(cols-1))/cols;
+  const ch=(usableH-gap*(rows-1))/rows;
+  const cages=[];
+  for(let i=0;i<MAX_DINOS;i++){
+    const c=i%cols, r=Math.floor(i/cols);
+    cages.push({slot:i, x:startX+c*(cw+gap), y:30+r*(ch+gap), w:cw, h:ch});
+  }
+  return cages;
+}
+function assignCages(){
+  const cages=getCages();
+  STATE.dinos.forEach((d,i)=>{
+    const c=cages[i]; if(!c)return;
+    d.cageSlot=i;
+    d.homeX=c.x; d.homeY=c.y; d.homeW=c.w; d.homeH=c.h;
+    if(d.x<c.x||d.x>c.x+c.w||d.y<c.y||d.y>c.y+c.h){
+      d.x=c.x+rndi(20,c.w-50); d.y=c.y+rndi(20,c.h-40);
+    }
+  });
+}
+
+/* ============ ABILITIES ============ */
+function tryAbility(d, target, arena){
+  const ab = d.ability ? ABILITIES[d.ability] : null;
+  if(!ab||!target) return false;
+  const now=Date.now();
+  if(now-(d.lastAbility||0) < ab.cd/STATE.speedMult) return false;
+  d.lastAbility = now;
+  const base = effAtk(d);
+  const dmg = Math.floor(base * (ab.mult||1));
+  const dEl = arena.querySelector(`[data-id="d${d.id}"]`);
+  if(dEl){ dEl.classList.add('ability-flash'); setTimeout(()=>dEl.classList.remove('ability-flash'),600); }
+  showFloat(arena, d.x+10, d.y-10, ab.name, '#fc4');
+
+  if(ab.type==='aoe'){
+    STATE.enemies.forEach(e=>{
+      if(e.hp<=0) return;
+      if(Math.hypot(e.x-d.x,e.y-d.y) <= ab.radius){
+        e.hp -= dmg;
+        showFloat(arena,e.x,e.y,`-${dmg}`,'#fa4');
+        if(ab.stun) e.stunUntil = now + ab.stun/STATE.speedMult;
+        if(e.hp<=0) onEnemyKilled(e,d);
+      }
+    });
+  } else if(ab.type==='pounce'){
+    d.x = Math.max(20, target.x - 25); d.y = target.y;
+    target.hp -= dmg;
+    showFloat(arena,target.x,target.y,`-${dmg}`,'#fa4');
+    if(ab.knockback) target.x = Math.max(0, target.x - ab.knockback);
+    if(ab.stun) target.stunUntil = now + ab.stun/STATE.speedMult;
+    if(ab.dot){ target.dotUntil=now+3000/STATE.speedMult; target.dotDmg=Math.floor(base*0.3); target.lastDot=now; }
+    if(target.hp<=0) onEnemyKilled(target,d);
+  } else if(ab.type==='line'){
+    const dx=target.x-d.x, dy=target.y-d.y, m=Math.hypot(dx,dy)||1;
+    const ux=dx/m, uy=dy/m;
+    STATE.enemies.forEach(e=>{
+      if(e.hp<=0) return;
+      const ex=e.x-d.x, ey=e.y-d.y;
+      const proj = ex*ux + ey*uy;
+      if(proj<0||proj>ab.length) return;
+      const perp = Math.abs(ex*(-uy) + ey*ux);
+      if(perp>35) return;
+      e.hp -= dmg;
+      showFloat(arena,e.x,e.y,`-${dmg}`,'#7df');
+      if(e.hp<=0) onEnemyKilled(e,d);
+    });
+  } else if(ab.type==='buff'){
+    d.buffUntil = now + ab.dur/STATE.speedMult;
+    d.buffMult = ab.mult;
+  } else if(ab.type==='multi'){
+    let hits=0;
+    const hit = ()=>{
+      if(hits>=ab.hits) return;
+      let tgt = target.hp>0 ? target : STATE.enemies.find(e=>e.hp>0);
+      if(!tgt) return;
+      tgt.hp -= dmg;
+      showFloat(arena,tgt.x,tgt.y,`-${dmg}`,'#7df');
+      if(tgt.hp<=0) onEnemyKilled(tgt,d);
+      hits++;
+      setTimeout(hit, 120/STATE.speedMult);
+    };
+    hit();
+  } else if(ab.type==='crit'){
+    target.hp -= dmg;
+    showFloat(arena,target.x,target.y,`CRIT -${dmg}`,'#f84');
+    if(ab.pierce){
+      const others = STATE.enemies.filter(e=>e!==target&&e.hp>0)
+        .sort((a,b)=>Math.hypot(a.x-target.x,a.y-target.y)-Math.hypot(b.x-target.x,b.y-target.y));
+      if(others[0]){
+        const pd = Math.floor(dmg*0.5);
+        others[0].hp -= pd;
+        showFloat(arena,others[0].x,others[0].y,`-${pd}`,'#f84');
+        if(others[0].hp<=0) onEnemyKilled(others[0],d);
+      }
+    }
+    if(target.hp<=0) onEnemyKilled(target,d);
+  } else if(ab.type==='dot'){
+    target.dotUntil = now + ab.dur/STATE.speedMult;
+    target.dotDmg = Math.floor(base*ab.dmg);
+    target.lastDot = now;
+    showFloat(arena,target.x,target.y,'POISON','#9f9');
+  }
+  return true;
+}
+
+/* ============ WAVES & COMBAT ============ */
+function startWave(){
+  if(STATE.inWave)return;
+  if(STATE.dinos.length===0){log('Hatch some dinos first!','#f88');return;}
+  STATE.inWave=true; STATE.wave++;
+  STATE.touristUsedThisWave=false;
+  switchView('arena');
+  const isBoss=STATE.wave%5===0; STATE.bossActive=isBoss;
+  const banner=document.getElementById('waveBanner');
+  if(isBoss){ banner.classList.add('boss'); banner.innerHTML=`!! BOSS WAVE ${STATE.wave} !!`; log(`BOSS WAVE ${STATE.wave}!`,'#fc4'); }
+  else { banner.classList.remove('boss'); banner.innerHTML=`Wave ${STATE.wave} — Defend!`; log(`Wave ${STATE.wave}!`,'#7fffa1'); }
+  const arena=document.getElementById('arena');
+  STATE.dinos.forEach((d,i)=>{
+    const row=Math.floor(i/3), col=i%3;
+    d.x=arena.offsetWidth-200+col*40; d.y=80+row*70;
+    d.hp=d.hpMax; d.lastAbility=0; d.buffUntil=0;
+  });
+  spawnEnemies(isBoss);
+  renderDinos();
+}
+
+function spawnEnemies(isBoss){
+  const count=4+Math.floor(STATE.wave*1.3); let spawned=0;
+  const arena=document.getElementById('arena');
+  if(isBoss){
+    const b=BOSS_TYPES[(STATE.wave/5-1)%BOSS_TYPES.length];
+    const tier=ENEMY_TYPES[Math.min(ENEMY_TYPES.length-1,Math.floor(STATE.wave/3))];
+    const boss={
+      id:STATE.nextId++,name:b.name,isBoss:true,
+      hpMax:Math.floor(tier.hp*STATE.wave*6),
+      atk:Math.floor(tier.atk*2.5), spd:tier.spd*0.7,
+      x:-40,y:arena.offsetHeight/2,lastAtk:0,
+      xpReward: 25 + STATE.wave*3
+    };
+    boss.hp=boss.hpMax; STATE.enemies.push(boss);
+  }
+  const iv=setInterval(()=>{
+    if(spawned>=count){clearInterval(iv);return;}
+    const tier=ENEMY_TYPES[Math.min(ENEMY_TYPES.length-1,Math.floor(STATE.wave/3))];
+    const e={
+      id:STATE.nextId++,name:tier.name,isBoss:false,
+      hpMax:Math.floor(tier.hp*(1+STATE.wave*.25)),
+      atk:Math.floor(tier.atk*(1+STATE.wave*.15)),
+      spd:tier.spd, x:-30, y:arena.offsetHeight/2+rnd(-50,50), lastAtk:0,
+      xpReward: tier.xp + Math.floor(STATE.wave/2)
+    };
+    e.hp=e.hpMax; STATE.enemies.push(e); spawned++;
+  }, 800/STATE.speedMult);
+}
+
+function combatTick(){
+  if(!STATE.inWave)return;
+  const arena=document.getElementById('arena');
+  const baseX=arena.offsetWidth-30;
+  const now=Date.now();
+  const sm=STATE.speedMult;
+
+  STATE.enemies.forEach(e=>{
+    if(e.hp<=0) return;
+    if(e.dotUntil && now < e.dotUntil && now-(e.lastDot||0) > 500/sm){
+      e.lastDot = now; e.hp -= e.dotDmg;
+      showFloat(arena,e.x,e.y,`-${e.dotDmg}`,'#9f9');
+      if(e.hp<=0){ const k = STATE.dinos.find(()=>true); if(k) onEnemyKilled(e,k); }
+    }
+  });
+
+  STATE.enemies.forEach(e=>{
+    if(e.hp<=0)return;
+    if(e.stunUntil && now<e.stunUntil) return;
+    let blocker=null,minD=40;
+    STATE.dinos.forEach(d=>{
+      if(d.hp<=0)return;
+      const dd=Math.hypot(d.x-e.x,d.y-e.y);
+      if(dd<minD){minD=dd;blocker=d;}
+    });
+    if(blocker){
+      if(now-e.lastAtk>1000/sm){
+        e.lastAtk=now;
+        const def=blocker.armor?ARMOR_TYPES[blocker.armor].def:0;
+        const dmg=Math.max(1,e.atk-def); blocker.hp-=dmg;
+        showFloat(arena,blocker.x,blocker.y,`-${dmg}`,'#f88');
+        if(blocker.hp<=0) log(`${blocker.name} fell!`,'#f88');
+      }
+    } else {
+      e.x+=e.spd*1.2*sm;
+      if(e.x>=baseX){
+        STATE.hp-=e.atk;
+        showFloat(arena,baseX-20,arena.offsetHeight/2,`-${e.atk}`,'#f44');
+        e.hp=0; log(`${e.name} hit park for ${e.atk}!`,'#f88');
+      }
+    }
+  });
+
+  STATE.dinos.forEach(d=>{
+    if(d.hp<=0)return;
+    let target=null,minDist=Infinity;
+    STATE.enemies.forEach(e=>{
+      if(e.hp<=0)return;
+      const dd=Math.hypot(e.x-d.x,e.y-d.y);
+      if(dd<minDist){minDist=dd;target=e;}
+    });
+    if(target){
+      if(minDist <= d.range*1.5) tryAbility(d, target, arena);
+      if(minDist > d.range*0.7){
+        const dx=target.x-d.x, dy=target.y-d.y, m=Math.hypot(dx,dy)||1;
+        const moveSpd=d.spd*1.5*sm;
+        d.x+=(dx/m)*moveSpd; d.y+=(dy/m)*moveSpd;
+        d.facing=dx<0?-1:1;
+      } else {
+        if(now-d.lastAtk>1000/d.spd/sm){
+          d.lastAtk=now;
+          const dmg = effAtk(d); target.hp-=dmg;
+          if(d.isDragon){
+            STATE.enemies.forEach(e=>{
+              if(e===target||e.hp<=0)return;
+              if(Math.hypot(e.x-target.x,e.y-target.y)<60){
+                const sd=Math.floor(dmg*0.5); e.hp-=sd;
+                showFloat(arena,e.x,e.y,`-${sd}`,'#fa4');
+                if(e.hp<=0) onEnemyKilled(e,d);
+              }
+            });
+          }
+          showFloat(arena,target.x,target.y,`-${dmg}`,d.isDragon?'#fa4':'#7fffa1');
+          if(target.hp<=0) onEnemyKilled(target,d);
+        }
+      }
+    } else {
+      const restX=arena.offsetWidth-200;
+      if(Math.abs(d.x-restX)>20){ d.x+=(restX>d.x?1:-1)*d.spd*sm; }
+    }
+    d.x=Math.max(20,Math.min(arena.offsetWidth-50,d.x));
+    d.y=Math.max(20,Math.min(arena.offsetHeight-50,d.y));
+  });
+
+  STATE.enemies=STATE.enemies.filter(e=>e.hp>0);
+  STATE.dinos.forEach(d=>{if(d.hp<0)d.hp=0;});
+  if(STATE.hp<=0){gameOver();return;}
+  if(STATE.enemies.length===0 && !STATE._endCheck){
+    STATE._endCheck=setTimeout(()=>{
+      if(STATE.enemies.length===0&&STATE.inWave) endWave();
+      STATE._endCheck=null;
+    }, 1500/sm);
+  }
+}
+
+function onEnemyKilled(e,killer){
+  if(e.killCounted) return; e.killCounted=true;
+  if(e.isBoss){
+    const r=200*Math.ceil(STATE.wave/5);
+    STATE.money+=r; STATE.food+=25; STATE.score+=500;
+    log(`BOSS DOWN by ${killer.name}! +${r} money`,'#fc4');
+    if(Math.random()<.25){
+      const types=Object.keys(ARMOR_TYPES);
+      const drop=types[Math.min(types.length-1,Math.floor(STATE.wave/5))];
+      STATE.armory.push({id:STATE.nextId++,type:drop});
+      log(`Boss dropped ${ARMOR_TYPES[drop].name}!`,'#9cf');
+    }
+  } else {
+    const r=8+STATE.wave*2; STATE.money+=r; STATE.score+=10+STATE.wave;
+    if(Math.random()<.3) STATE.food++;
+  }
+  const heal=Math.max(2,Math.floor(killer.hpMax*0.05));
+  if(killer.hp<killer.hpMax){
+    killer.hp=Math.min(killer.hpMax,killer.hp+heal);
+    showFloat(document.getElementById('arena'),killer.x,killer.y+10,`+${heal}HP`,'#7fffa1');
+  }
+  const xpGain=e.xpReward||1;
+  killer.xp=(killer.xp||0)+xpGain;
+  showFloat(document.getElementById('arena'),killer.x,killer.y-10,`+${xpGain}XP`,'#fc8');
+  while(killer.xp>=xpForNext(killer.level)){
+    killer.xp-=xpForNext(killer.level);
+    applyLevelUp(killer,'combat');
+  }
+  updateStats();
+}
+
+function endWave(){
+  STATE.inWave=false; STATE.bossActive=false;
+  const bonus=50+STATE.wave*15; STATE.money+=bonus; STATE.score+=STATE.wave*20;
+  log(`Wave ${STATE.wave} cleared! +${bonus} money`,'#7fffa1');
+  document.getElementById('waveBanner').classList.remove('boss');
+  document.getElementById('waveBanner').innerHTML=`Wave ${STATE.wave} cleared! Open the park to tourists.`;
+  STATE.dinos.forEach(d=>{d.hp=Math.min(d.hpMax,d.hp+Math.floor(d.hpMax*.3));});
+  switchView('park'); assignCages();
+  updateStats(); renderDinos(); renderPark();
+}
+
+function gameOver(){
+  STATE.inWave=false;
+  document.getElementById('waveBanner').innerHTML=`GAME OVER — Wave ${STATE.wave}, Score ${STATE.score}`;
+  log(`GAME OVER! Score: ${STATE.score}`,'#f44');
+  setTimeout(()=>{if(confirm('Game Over! Restart?'))location.reload();},500);
+}
+
+function showFloat(p,x,y,t,c){
+  if(!p) return;
+  const f=document.createElement('div'); f.className='float-text'; f.textContent=t; f.style.color=c;
+  f.style.left=x+'px'; f.style.top=y+'px'; p.appendChild(f); setTimeout(()=>f.remove(),1000);
+}
+
+/* ============ VIEWS ============ */
+function switchView(v){
+  STATE.view=v;
+  document.getElementById('parkView').style.display=v==='park'?'block':'none';
+  document.getElementById('arena').style.display=v==='arena'?'block':'none';
+  document.getElementById('tabPark').classList.toggle('active',v==='park');
+  document.getElementById('tabArena').classList.toggle('active',v==='arena');
+  if(v==='park'){assignCages();renderPark();} else renderArena();
+}
+
+function closeModal(){
+  document.getElementById('modal').classList.remove('show');
+}
+
+/* ============ RENDER: STATS ============ */
+function updateStats(){
+  document.getElementById('sMoney').textContent=fmt(STATE.money);
+  document.getElementById('sFood').textContent=fmt(STATE.food);
+  document.getElementById('sHP').textContent=`${fmt(STATE.hp)}/${fmt(STATE.hpMax)}`;
+  document.getElementById('sWave').textContent=STATE.wave;
+  document.getElementById('sScore').textContent=STATE.score;
+  document.getElementById('sArmory').textContent=STATE.armory.length;
+  document.getElementById('sCages').textContent=`${STATE.dinos.length}/${MAX_DINOS}`;
+}
+
+/* ============ RENDER: ROSTER ============ */
+function renderDinos(){
+  const el=document.getElementById('dinoList'); el.innerHTML='';
+  if(STATE.dinos.length===0){el.innerHTML='<div style="color:#888;font-size:12px;text-align:center;padding:10px;">No dinos yet — buy an egg!</div>';return;}
+  STATE.dinos.forEach(d=>{
+    const ab=d.ability?ABILITIES[d.ability]:null;
+    const xpPct=Math.min(100,Math.floor(d.xp/xpForNext(d.level)*100));
+    const armorText=d.armor?`<span style="color:#9cf;">[${ARMOR_TYPES[d.armor].name}]</span>`:'';
+    const div=document.createElement('div'); div.className='card';
+    div.innerHTML=`
+      <div class="row">
+        <div class="preview">
+          ${getDinoSVG(d.name,38)}
+          <div>
+            <div class="name">${d.name} <span class="badge ${d.rarity}">${d.rarity}</span></div>
+            <div style="font-size:10px;color:#aaa;">L${d.level} ${armorText}</div>
+            ${ab?`<div class="ability-tag">${ab.name} — ${ab.desc}</div>`:''}
+          </div>
+        </div>
+      </div>
+      <div class="xpbar"><div style="width:${xpPct}%"></div></div>
+      <div class="mini-stat">HP <span>${fmt(d.hp)}/${fmt(d.hpMax)}</span> &nbsp; ATK <span>${effAtk(d)}</span> &nbsp; SPD <span>${d.spd}</span> &nbsp; RNG <span>${d.range}</span></div>
+      <div class="mini-stat">XP <span>${d.xp}/${xpForNext(d.level)}</span></div>
+      <div class="actions">
+        <button onclick="feedDino(${d.id})">Feed (${5} food)</button>
+        <button onclick="openArmorPicker(${d.id})">Armor</button>
+        <button onclick="trainDino(${d.id})">Train L (${50*d.level}$)</button>
+        <button onclick="trainSpeed(${d.id})">Spd (${40*d.level}$)</button>
+        <button onclick="trainRange(${d.id})">Rng (${40*d.level}$)</button>
+        <button onclick="sellDino(${d.id})" style="background:#6b2020;">Sell (${Math.floor(DINO_TYPES[d.rarity].cost*.5*d.level)}$)</button>
+      </div>`;
+    el.appendChild(div);
+  });
+}
+
+/* ============ RENDER: PARK ============ */
+function renderPark(){
+  if(STATE.view!=='park') return;
+  const park=document.getElementById('parkView');
+  // Remove all non-tourist, non-entity elements (cages, decos, paths) but keep tourists
+  Array.from(park.children).forEach(c=>{
+    if(!c.classList.contains('tourist')) c.remove();
+  });
+
+  const W=park.offsetWidth||740, H=park.offsetHeight||580;
+
+  // Toll booth
+  const tb=document.createElement('div'); tb.className='tollBooth';
+  const tw=document.createElement('div'); tw.className='tollWindow'; tb.appendChild(tw);
+  park.appendChild(tb);
+  const tg=document.createElement('div'); tg.className='tollGate'; park.appendChild(tg);
+
+  // Main horizontal path
+  const mp=document.createElement('div'); mp.className='mainPath';
+  mp.style.cssText=`left:0;top:${H/2-18}px;width:100%;height:36px;`;
+  park.appendChild(mp);
+
+  const cages=getCages();
+
+  // Branch paths up/down from main path to each cage center
+  cages.forEach(c=>{
+    const cx=c.x+c.w/2-6;
+    const ccy=c.y+c.h/2;
+    const midY=H/2;
+    const bp=document.createElement('div'); bp.className='mainPath';
+    bp.style.opacity='.6';
+    if(ccy<midY){
+      bp.style.cssText=`left:${cx}px;top:${ccy}px;width:12px;height:${midY-ccy}px;`;
+    } else {
+      bp.style.cssText=`left:${cx}px;top:${midY}px;width:12px;height:${ccy-midY}px;`;
+    }
+    park.appendChild(bp);
+  });
+
+  // Scatter decorative trees/rocks (deterministic based on index)
+  const decoData=[
+    {x:0.12,y:0.15,t:'tree'},{x:0.22,y:0.75,t:'tree'},{x:0.55,y:0.08,t:'tree'},
+    {x:0.70,y:0.85,t:'tree'},{x:0.88,y:0.12,t:'rock'},{x:0.35,y:0.88,t:'rock'},
+    {x:0.92,y:0.72,t:'rock'},{x:0.18,y:0.42,t:'flower'},{x:0.80,y:0.50,t:'flower'}
+  ];
+  decoData.forEach(dd=>{
+    const d=document.createElement('div'); d.className='deco';
+    d.style.left=(dd.x*W)+'px'; d.style.top=(dd.y*H)+'px';
+    if(dd.t==='tree') d.innerHTML=renderTreeSVG();
+    else if(dd.t==='rock') d.innerHTML=renderRockSVG();
+    else d.innerHTML=renderFlowerSVG();
+    park.appendChild(d);
+  });
+
+  // Pond
+  const pond=document.createElement('div'); pond.className='pond';
+  pond.style.cssText=`left:${W*0.04}px;top:${H*0.62}px;width:60px;height:38px;`;
+  park.appendChild(pond);
+
+  // Cages
+  cages.forEach((c,i)=>{
+    const dino=STATE.dinos[i]||null;
+    const cage=document.createElement('div'); cage.className='cage';
+    cage.style.cssText=`left:${c.x}px;top:${c.y}px;width:${c.w}px;height:${c.h}px;`;
+
+    const lbl=document.createElement('div'); lbl.className='cageLabel';
+    lbl.textContent=dino?`Cage ${i+1}: ${dino.name}`:`Cage ${i+1} (Empty)`;
+    cage.appendChild(lbl);
+
+    if(!dino){
+      const emp=document.createElement('div'); emp.className='cageEmpty';
+      emp.textContent='Buy an egg!';
+      cage.appendChild(emp);
+    }
+    park.appendChild(cage);
+  });
+
+  // Dino entities inside their cages
+  STATE.dinos.forEach(d=>{
+    const el=document.createElement('div');
+    el.className='entity dino'+(d.facing===-1?' flip':'');
+    el.dataset.id='d'+d.id;
+    el.style.left=d.x+'px'; el.style.top=d.y+'px';
+    el.innerHTML=`<div class="hpbar"><div style="width:${Math.max(0,d.hp/d.hpMax*100)}%"></div></div>${getDinoSVG(d.name,42)}`;
+    park.appendChild(el);
+  });
+}
+
+function renderTreeSVG(){
+  return `<svg width="28" height="36" viewBox="0 0 28 36" xmlns="http://www.w3.org/2000/svg">
+    <rect x="12" y="26" width="4" height="10" fill="#7a5a2a"/>
+    <polygon points="14,2 2,20 26,20" fill="#2d6e1e"/>
+    <polygon points="14,8 3,24 25,24" fill="#3a8a2a"/>
+  </svg>`;
+}
+function renderRockSVG(){
+  return `<svg width="24" height="16" viewBox="0 0 24 16" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="12" cy="10" rx="11" ry="6" fill="#888"/>
+    <ellipse cx="12" cy="8" rx="9" ry="5" fill="#aaa"/>
+  </svg>`;
+}
+function renderFlowerSVG(){
+  return `<svg width="18" height="20" viewBox="0 0 18 20" xmlns="http://www.w3.org/2000/svg">
+    <line x1="9" y1="20" x2="9" y2="10" stroke="#2d8a1e" stroke-width="2"/>
+    <circle cx="9" cy="8" r="4" fill="#fc8"/>
+    <circle cx="9" cy="4" r="2.5" fill="#f44"/>
+  </svg>`;
+}
+
+/* ============ RENDER: ARENA ============ */
+function renderArena(){
+  if(STATE.view!=='arena') return;
+  const arena=document.getElementById('arena');
+  // Remove old entities only
+  Array.from(arena.querySelectorAll('.entity')).forEach(e=>e.remove());
+
+  // Draw dinos
+  STATE.dinos.forEach(d=>{
+    if(d.hp<=0) return;
+    const el=document.createElement('div');
+    const now=Date.now();
+    const isStunned=d.stunUntil&&now<d.stunUntil;
+    const isBuffed=d.buffUntil&&now<d.buffUntil;
+    el.className='entity dino'+(d.facing===-1?' flip':'')+(isStunned?' stunned':'')+(isBuffed?' buffed':'');
+    el.dataset.id='d'+d.id;
+    el.style.left=d.x+'px'; el.style.top=d.y+'px';
+    const pct=Math.max(0,d.hp/d.hpMax*100);
+    const hpColor=pct>50?'#3f3':pct>25?'#fc4':'#f44';
+    el.innerHTML=`
+      <div class="label">${d.name} L${d.level}</div>
+      <div class="hpbar"><div style="width:${pct}%;background:${hpColor}"></div></div>
+      ${getDinoSVG(d.name,44+(d.isDragon?8:0))}`;
+    arena.appendChild(el);
+  });
+
+  // Draw enemies
+  STATE.enemies.forEach(e=>{
+    if(e.hp<=0) return;
+    const el=document.createElement('div');
+    const now=Date.now();
+    const isStunned=e.stunUntil&&now<e.stunUntil;
+    el.className='entity'+(isStunned?' stunned':'')+(e.isBoss?' boss':'');
+    el.dataset.id='e'+e.id;
+    el.style.left=e.x+'px'; el.style.top=e.y+'px';
+    const pct=Math.max(0,e.hp/e.hpMax*100);
+    const sz=e.isBoss?60:44;
+    el.innerHTML=`
+      <div class="label">${e.name}${e.isBoss?' [BOSS]':''}</div>
+      <div class="hpbar"><div style="width:${pct}%;background:${e.isBoss?'#f84':'#f44'}"></div></div>
+      ${getEnemySVG(e.name,sz)}`;
+    arena.appendChild(el);
+  });
+}
+
+/* ============ PARK WANDER ============ */
+function parkWander(){
+  if(STATE.view!=='park'||STATE.inWave) return;
+  const sm=STATE.speedMult;
+  STATE.dinos.forEach(d=>{
+    if(!d.homeW) return;
+    d.x+=d.vx*sm; d.y+=d.vy*sm;
+    const pad=16;
+    if(d.x<=d.homeX+pad||d.x>=d.homeX+d.homeW-pad) d.vx*=-1;
+    if(d.y<=d.homeY+pad||d.y>=d.homeY+d.homeH-pad) d.vy*=-1;
+    d.x=Math.max(d.homeX+pad,Math.min(d.homeX+d.homeW-pad,d.x));
+    d.y=Math.max(d.homeY+pad,Math.min(d.homeY+d.homeH-pad,d.y));
+    d.facing=d.vx<0?-1:1;
+    if(Math.random()<0.005){ d.vx=rnd(-.9,.9)||.4; d.vy=rnd(-.9,.9)||.4; }
+    // Update entity position
+    const el=document.getElementById('parkView').querySelector(`[data-id="d${d.id}"]`);
+    if(el){
+      el.style.left=d.x+'px'; el.style.top=d.y+'px';
+      el.classList.toggle('flip',d.facing===-1);
+    }
+  });
+}
+
+/* ============ GAME LOOP ============ */
+setInterval(()=>{
+  if(STATE.inWave){ combatTick(); renderArena(); }
+  else { parkWander(); }
+  updateStats();
+}, 50);
+
+// Initial render
+updateStats();
+renderDinos();
+renderPark();
+</script>
+</body>
+</html>

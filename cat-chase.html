@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Cat Chase!</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a1a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      font-family: 'Segoe UI', sans-serif;
+      color: #fff;
+      overflow: hidden;
+    }
+    h1 {
+      font-size: 1.6rem;
+      margin-bottom: 8px;
+      color: #a0f0ff;
+      text-shadow: 0 0 10px #00cfff;
+    }
+    #hud {
+      display: flex;
+      gap: 30px;
+      margin-bottom: 8px;
+      font-size: 1rem;
+    }
+    #score-display { color: #ffe066; }
+    #lives-display { color: #ff6688; }
+    canvas {
+      border: 2px solid #333;
+      border-radius: 6px;
+      background: #111122;
+      display: block;
+    }
+    #overlay {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      background: rgba(0,0,0,0.90);
+      width: 600px;
+      padding: 28px 24px;
+      border-radius: 8px;
+    }
+    #overlay h2 { font-size: 2rem; color: #a0f0ff; }
+    #overlay p  { font-size: 0.9rem; color: #ccc; text-align: center; max-width: 440px; }
+    #overlay #startBtn {
+      padding: 10px 34px; font-size: 1rem;
+      background: #1a8cff; color: #fff;
+      border: none; border-radius: 6px; cursor: pointer;
+    }
+    #overlay #startBtn:hover { background: #0070dd; }
+    .cat-btn {
+      padding: 8px 22px; font-size: 0.95rem;
+      background: #16162e; color: #aac;
+      border: 2px solid #334; border-radius: 8px; cursor: pointer;
+      transition: border-color .12s, background .12s;
+    }
+    .cat-btn:hover { border-color: #66a; }
+    .cat-btn.active { background: #162a50; border-color: #4af; color: #fff; }
+  </style>
+</head>
+<body>
+<h1>🐱 Cat Chase!</h1>
+<div id="hud">
+  <span id="score-display">Score: 0</span>
+  <span id="lives-display">Lives: ♥♥♥</span>
+</div>
+<div style="position:relative;">
+  <canvas id="game" width="600" height="300"></canvas>
+  <div id="overlay">
+    <h2>Cat Chase!</h2>
+    <p>Pick your cat:</p>
+    <div style="display:flex;gap:10px">
+      <button class="cat-btn active" data-cat="calico">🟠 Calico</button>
+      <button class="cat-btn"        data-cat="black" >⚫ Black</button>
+      <button class="cat-btn"        data-cat="orange">🧡 Orange</button>
+    </div>
+    <p>↑ / Space to jump &nbsp;·&nbsp; Stomp enemies to stun &nbsp;·&nbsp; Dodge bullets!</p>
+    <button id="startBtn">Start Game</button>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx    = canvas.getContext('2d');
+const overlay    = document.getElementById('overlay');
+const startBtn   = document.getElementById('startBtn');
+const scoreEl    = document.getElementById('score-display');
+const livesEl    = document.getElementById('lives-display');
+
+const W = canvas.width, H = canvas.height;
+const GROUND = H - 50;
+
+// ─── State ──────────────────────────────────────────────────────────────────
+let state, score, lives, raf;
+let stars = [];
+let speedLevel = 0, speedTick = 0, speedPopup = 0;
+let catType = 'calico'; // 'calico' | 'black' | 'orange'
+
+function attachCatListeners() {
+  document.querySelectorAll('.cat-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      catType = btn.dataset.cat;
+    });
+  });
+}
+attachCatListeners();
+
+// ─── Cat ────────────────────────────────────────────────────────────────────
+const cat = {
+  x: 90, y: GROUND, w: 38, h: 38,
+  vy: 0, jumping: false, stunTimer: 0,
+  frame: 0, frameTick: 0, prevY: GROUND,
+  reset() {
+    this.y = GROUND; this.prevY = GROUND; this.vy = 0; this.jumping = false; this.stunTimer = 0;
+  }
+};
+
+// ─── Enemies ─────────────────────────────────────────────────────────────────
+const alien = {
+  x: W + 80, y: GROUND, w: 40, h: 48,
+  speed: 1.8, stunTimer: 0, frame: 0, frameTick: 0,
+  reset() { this.x = W + 80; this.y = GROUND; this.stunTimer = 0; }
+};
+const moth = {
+  x: W + 250, y: GROUND - 40, w: 44, h: 40,
+  speed: 1.4, stunTimer: 0, frame: 0, frameTick: 0,
+  amplitude: 40, angle: 0,
+  reset() { this.x = W + 250; this.stunTimer = 0; this.angle = 0; }
+};
+
+// ─── Projectiles (alien shoots) ───────────────────────────────────────────────
+let bullets = [];
+let bulletCooldown = 0;
+
+// ─── Stars ───────────────────────────────────────────────────────────────────
+function makeStars() {
+  stars = [];
+  for (let i = 0; i < 60; i++) {
+    stars.push({ x: Math.random()*W, y: Math.random()*(H-60), r: Math.random()*1.5+0.3, s: Math.random()*0.4+0.1 });
+  }
+}
+
+// ─── Input ───────────────────────────────────────────────────────────────────
+let jumpPressed = false;
+document.addEventListener('keydown', e => {
+  if ((e.code === 'ArrowUp' || e.code === 'Space') && state === 'playing') {
+    e.preventDefault();
+    jumpPressed = true;
+  }
+});
+document.addEventListener('touchstart', () => { jumpPressed = true; });
+
+// ─── Start / Restart ─────────────────────────────────────────────────────────
+startBtn.addEventListener('click', startGame);
+
+function startGame() {
+  overlay.style.display = 'none';
+  score = 0; lives = 3; state = 'playing';
+  speedLevel = 0; speedTick = 0; speedPopup = 0;
+  cat.reset(); alien.reset(); moth.reset();
+  bullets = []; bulletCooldown = 0;
+  makeStars();
+  if (raf) cancelAnimationFrame(raf);
+  loop();
+}
+
+// ─── Physics helpers ─────────────────────────────────────────────────────────
+const GRAVITY = 0.55, JUMP_V = -12;
+
+function tryJump() {
+  if (!cat.jumping) {
+    cat.vy = JUMP_V;
+    cat.jumping = true;
+  }
+}
+
+// ─── Collision (AABB with shrink) ────────────────────────────────────────────
+function overlaps(a, b, shrink = 8) {
+  return a.x + shrink < b.x + b.w - shrink &&
+         a.x + a.w - shrink > b.x + shrink &&
+         a.y + shrink < b.y + b.h - shrink &&
+         a.y + a.h - shrink > b.y + shrink;
+}
+
+// Stomp / side-hit resolver.
+// Uses cat.prevY (position BEFORE this frame's physics) so a fast fall never
+// falsely registers as a side hit and landing on top never costs a life.
+function resolveEnemy(enemy) {
+  if (!overlaps(cat, enemy, 6)) return;
+  const prevBottom = cat.prevY + cat.h;
+  const enemyTop   = enemy.y + 8; // top 8px = stompable zone
+  if (cat.vy > 1 && prevBottom <= enemyTop) {
+    // ── Successful stomp ──
+    enemy.stunTimer = 110;
+    cat.vy = -11;
+    enemy.x = cat.x + cat.w + 12; // push clear so overlap is gone
+  } else if (cat.stunTimer === 0) {
+    // ── Side / body hit ──
+    enemy.x = cat.x + cat.w + 44; // shove far right — no lingering overlap
+    hitCat();
+  }
+}
+
+// ─── Update ──────────────────────────────────────────────────────────────────
+function update() {
+  score++;
+
+  // Jump input
+  if (jumpPressed) { tryJump(); jumpPressed = false; }
+
+  // Cat physics
+  cat.prevY = cat.y;          // snapshot position before movement
+  cat.vy += GRAVITY;
+  cat.y  += cat.vy;
+  if (cat.y >= GROUND) { cat.y = GROUND; cat.vy = 0; cat.jumping = false; }
+  if (cat.stunTimer > 0) cat.stunTimer--;
+
+  // Cat animation frame
+  cat.frameTick++;
+  if (cat.frameTick > 8) { cat.frame = (cat.frame + 1) % 2; cat.frameTick = 0; }
+
+  // Speed ramp — increases every 10 seconds (600 ticks)
+  speedTick++;
+  if (speedTick >= 600) { speedTick = 0; speedLevel++; speedPopup = 120; }
+  if (speedPopup > 0) speedPopup--;
+  const ramp = 1 + speedLevel * 0.2;
+
+  // Alien movement — ground only
+  if (alien.stunTimer > 0) {
+    alien.stunTimer--;
+  } else {
+    alien.x -= alien.speed * ramp;
+    alien.y = GROUND;
+    alien.frameTick++;
+    if (alien.frameTick > 10) { alien.frame = (alien.frame+1)%2; alien.frameTick=0; }
+  }
+  // Wrap alien
+  if (alien.x < -alien.w) alien.x = W + 60 + Math.random() * 120;
+
+  // Moth movement (sinusoidal)
+  if (moth.stunTimer > 0) {
+    moth.stunTimer--;
+  } else {
+    moth.x -= moth.speed * ramp;
+    moth.angle += 0.06;
+    moth.y = (GROUND - 55) + Math.sin(moth.angle) * moth.amplitude;
+    moth.frameTick++;
+    if (moth.frameTick > 5) { moth.frame = (moth.frame+1)%2; moth.frameTick=0; }
+  }
+  if (moth.x < -moth.w) moth.x = W + 150 + Math.random() * 200;
+
+  // Bullets
+  bulletCooldown--;
+  if (bulletCooldown <= 0 && alien.x < W - 20 && alien.stunTimer === 0) {
+    bullets.push({ x: alien.x, y: alien.y + 18, w: 10, h: 6, speed: 3.5 * ramp });
+    bulletCooldown = 120 + Math.floor(Math.random() * 80);
+  }
+  bullets.forEach(b => b.x -= b.speed);
+  bullets = bullets.filter(b => b.x > -20);
+
+  // ── Enemy collisions ──
+  resolveEnemy(alien);
+  resolveEnemy(moth);
+
+  // ── Collision: cat vs bullets ──
+  bullets.forEach((b, i) => {
+    if (cat.stunTimer === 0 &&
+        cat.x < b.x + b.w && cat.x + cat.w > b.x &&
+        cat.y < b.y + b.h && cat.y + cat.h > b.y) {
+      bullets.splice(i, 1);
+      hitCat();
+    }
+  });
+
+  // Stars parallax
+  stars.forEach(s => { s.x -= s.s; if (s.x < 0) s.x = W; });
+
+  updateHUD();
+}
+
+function hitCat() {
+  lives--;
+  cat.stunTimer = 120; // longer invincibility
+  cat.vy = -7;
+  if (lives <= 0) gameOver();
+}
+
+function updateHUD() {
+  scoreEl.textContent = 'Score: ' + score;
+  livesEl.textContent = 'Lives: ' + '♥'.repeat(Math.max(0, lives)) + '  Speed Lv.' + (speedLevel + 1);
+}
+
+// ─── Draw ────────────────────────────────────────────────────────────────────
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  // Sky gradient
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#07071a');
+  grad.addColorStop(1, '#1a1a3a');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Stars
+  ctx.fillStyle = '#ffffff';
+  stars.forEach(s => {
+    ctx.globalAlpha = 0.5 + 0.5 * Math.sin(Date.now()/600 + s.x);
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+
+  // Ground
+  ctx.fillStyle = '#2a2a50';
+  ctx.fillRect(0, GROUND + 38, W, H);
+  ctx.fillStyle = '#3a3a70';
+  ctx.fillRect(0, GROUND + 38, W, 4);
+
+  // Bullets
+  bullets.forEach(b => {
+    ctx.fillStyle = '#00ff99';
+    ctx.shadowColor = '#00ff99';
+    ctx.shadowBlur = 8;
+    ctx.fillRect(b.x, b.y, b.w, b.h);
+    ctx.shadowBlur = 0;
+  });
+
+  // Cat
+  drawCat(cat.x, cat.y, cat.frame, cat.stunTimer > 0);
+
+  // Alien
+  drawAlien(alien.x, alien.y, alien.frame, alien.stunTimer > 0);
+
+  // Mothman
+  drawMothman(moth.x, moth.y, moth.frame, moth.stunTimer > 0);
+
+  // Speed-up popup
+  if (speedPopup > 0) {
+    const alpha = speedPopup > 60 ? 1 : speedPopup / 60;
+    const scale = 1 + (1 - speedPopup / 120) * 0.4;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(W / 2, H / 2 - 30);
+    ctx.scale(scale, scale);
+    ctx.font = 'bold 32px Segoe UI';
+    ctx.textAlign = 'center';
+    ctx.shadowColor = '#ff4400';
+    ctx.shadowBlur = 20;
+    ctx.fillStyle = '#ffaa00';
+    ctx.fillText('⚡ SPEED UP! Lv.' + (speedLevel), 0, 0);
+    ctx.shadowBlur = 0;
+    ctx.restore();
+  }
+}
+
+// ── Cat colour schemes ───────────────────────────────────────────────────────
+const CAT_SCHEMES = {
+  calico: { body:'#f5f0e8', p1:'#e8814a', p2:'#222',    earL:'#222',    earR:'#e8814a', eye:'#44ff88', tail:'#e8814a', tailTip:'#222'     },
+  black:  { body:'#1c1c1c', p1:'#141414', p2:'#111',    earL:'#1c1c1c', earR:'#1c1c1c', eye:'#ffee00', tail:'#1c1c1c', tailTip:'#111'     },
+  orange: { body:'#e8702a', p1:'#c85a10', p2:'#b04808', earL:'#e8702a', earR:'#e8702a', eye:'#44ff88', tail:'#e8702a', tailTip:'#c85a10'  },
+};
+
+// ── Cat sprite (supports calico / black / orange) ────────────────────────────
+function drawCat(x, y, frame, stunned) {
+  ctx.save();
+  if (stunned) ctx.globalAlpha = 0.5 + 0.5 * Math.sin(Date.now()/60);
+  const C = CAT_SCHEMES[catType] || CAT_SCHEMES.calico;
+
+  // Body
+  ctx.fillStyle = C.body;
+  ctx.fillRect(x+4, y+12, 30, 22);
+  if (catType === 'calico') {
+    ctx.fillStyle = C.p1; ctx.fillRect(x+22, y+14, 12, 18);
+    ctx.fillStyle = C.p2; ctx.fillRect(x+5,  y+24, 12, 10);
+  } else if (catType === 'orange') {
+    ctx.fillStyle = C.p1; ctx.fillRect(x+8, y+20, 8, 8);
+  }
+
+  // Head
+  ctx.fillStyle = C.body;
+  ctx.fillRect(x+10, y, 22, 20);
+  if (catType === 'calico') {
+    ctx.fillStyle = C.p1; ctx.fillRect(x+22, y+1, 10, 14);
+    ctx.fillStyle = C.p2; ctx.fillRect(x+10, y,    8,  7);
+  } else if (catType === 'orange') {
+    ctx.fillStyle = C.p1; ctx.fillRect(x+13, y+4, 6, 4);
+  }
+
+  // Ears
+  ctx.fillStyle = C.earL;
+  ctx.beginPath(); ctx.moveTo(x+11,y+2); ctx.lineTo(x+5, y-10); ctx.lineTo(x+17,y+2); ctx.fill();
+  ctx.fillStyle = C.earR;
+  ctx.beginPath(); ctx.moveTo(x+23,y+2); ctx.lineTo(x+29,y-10); ctx.lineTo(x+35,y+2); ctx.fill();
+  ctx.fillStyle = catType === 'black' ? '#553344' : '#ff9999';
+  ctx.beginPath(); ctx.moveTo(x+12,y+1); ctx.lineTo(x+8, y-7); ctx.lineTo(x+16,y+1); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x+24,y+1); ctx.lineTo(x+28,y-7); ctx.lineTo(x+32,y+1); ctx.fill();
+
+  // Eyes
+  ctx.fillStyle = '#000';
+  ctx.fillRect(x+13,y+6,5,5); ctx.fillRect(x+24,y+6,5,5);
+  ctx.fillStyle = C.eye;
+  ctx.fillRect(x+14,y+7,3,3); ctx.fillRect(x+25,y+7,3,3);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(x+15,y+8,2,2); ctx.fillRect(x+26,y+8,2,2);
+
+  // Nose & mouth
+  ctx.fillStyle = catType === 'black' ? '#cc4488' : '#ff6699';
+  ctx.fillRect(x+19,y+13,4,3);
+  ctx.fillStyle = '#555';
+  ctx.fillRect(x+18,y+16,2,2); ctx.fillRect(x+22,y+16,2,2);
+
+  // Tail
+  ctx.strokeStyle = C.tail; ctx.lineWidth = 4; ctx.lineCap = 'round';
+  const tailWag = Math.sin(Date.now()/200) * 8;
+  ctx.beginPath();
+  ctx.moveTo(x+4, y+26);
+  ctx.quadraticCurveTo(x-12, y+24+tailWag, x-6, y+10+tailWag);
+  ctx.stroke();
+  ctx.strokeStyle = C.tailTip;
+  ctx.beginPath(); ctx.moveTo(x-8,y+14+tailWag); ctx.lineTo(x-6,y+10+tailWag); ctx.stroke();
+
+  // Legs
+  const legOff = frame * 5;
+  ctx.fillStyle = C.body;  ctx.fillRect(x+8,  y+32, 8, 6+legOff);
+  ctx.fillStyle = catType === 'calico' ? C.p1 : C.body;
+  ctx.fillRect(x+22, y+32, 8, 6+(5-legOff));
+
+  ctx.restore();
+}
+
+// ── Alien sprite ──────────────────────────────────────────────────────────────
+function drawAlien(x, y, frame, stunned) {
+  ctx.save();
+  if (stunned) {
+    ctx.globalAlpha = 0.5 + 0.5 * Math.sin(Date.now()/60);
+    // Stars above when stunned
+    ctx.font = '14px serif';
+    ctx.fillText('★ ★ ★', x-4, y-8);
+  }
+
+  // Body (green)
+  ctx.fillStyle = '#44dd55';
+  ctx.beginPath();
+  ctx.ellipse(x+20, y+28, 14, 16, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Head (large dome)
+  ctx.fillStyle = '#55ee66';
+  ctx.beginPath();
+  ctx.ellipse(x+20, y+12, 18, 16, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Visor
+  ctx.fillStyle = 'rgba(80,200,255,0.6)';
+  ctx.beginPath();
+  ctx.ellipse(x+20, y+11, 12, 9, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Big eyes behind visor
+  ctx.fillStyle = '#000';
+  ctx.beginPath(); ctx.ellipse(x+14, y+11, 5, 7, -0.2, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x+26, y+11, 5, 7,  0.2, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#ff2266';
+  ctx.beginPath(); ctx.arc(x+14, y+11, 2, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x+26, y+11, 2, 0, Math.PI*2); ctx.fill();
+
+  // Antennae
+  ctx.strokeStyle = '#44dd55';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x+14, y-2); ctx.lineTo(x+8,  y-14); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x+26, y-2); ctx.lineTo(x+32, y-14); ctx.stroke();
+  ctx.fillStyle = '#ffff00';
+  ctx.beginPath(); ctx.arc(x+8,  y-14, 3, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x+32, y-14, 3, 0, Math.PI*2); ctx.fill();
+
+  // Arms
+  ctx.strokeStyle = '#44dd55';
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  const armSwing = Math.sin(Date.now()/300) * 10;
+  ctx.beginPath(); ctx.moveTo(x+6,  y+24); ctx.lineTo(x-6,  y+32+armSwing); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x+34, y+24); ctx.lineTo(x+44, y+32-armSwing); ctx.stroke();
+
+  // Legs
+  ctx.fillStyle = '#44dd55';
+  const legOff = frame * 6;
+  ctx.fillRect(x+11, y+40, 7, 8+legOff);
+  ctx.fillRect(x+22, y+40, 7, 8+(6-legOff));
+
+  ctx.restore();
+}
+
+// ── Mothman sprite ────────────────────────────────────────────────────────────
+function drawMothman(x, y, frame, stunned) {
+  ctx.save();
+  if (stunned) {
+    ctx.globalAlpha = 0.5 + 0.5 * Math.sin(Date.now()/60);
+    ctx.font = '14px serif';
+    ctx.fillText('✦ ✦ ✦', x-4, y-8);
+  }
+
+  // Wings (flapping)
+  const wFlap = frame === 0 ? 0 : 12;
+  ctx.fillStyle = 'rgba(60,0,80,0.9)';
+  // Left wing
+  ctx.beginPath();
+  ctx.moveTo(x+22, y+14);
+  ctx.bezierCurveTo(x+5, y-10+wFlap, x-18, y+wFlap, x-10, y+28);
+  ctx.bezierCurveTo(x+4, y+32, x+14, y+24, x+22, y+14);
+  ctx.fill();
+  // Right wing
+  ctx.beginPath();
+  ctx.moveTo(x+22, y+14);
+  ctx.bezierCurveTo(x+39, y-10+wFlap, x+62, y+wFlap, x+54, y+28);
+  ctx.bezierCurveTo(x+40, y+32, x+30, y+24, x+22, y+14);
+  ctx.fill();
+
+  // Wing veins
+  ctx.strokeStyle = 'rgba(120,40,160,0.5)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(x+22,y+14); ctx.lineTo(x-8, y+20+wFlap/2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x+22,y+14); ctx.lineTo(x+52, y+20+wFlap/2); ctx.stroke();
+
+  // Body
+  ctx.fillStyle = '#2a0a2a';
+  ctx.beginPath();
+  ctx.ellipse(x+22, y+22, 10, 16, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Head
+  ctx.fillStyle = '#3a1040';
+  ctx.beginPath();
+  ctx.ellipse(x+22, y+7, 10, 10, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Glowing red eyes
+  ctx.shadowColor = '#ff0000';
+  ctx.shadowBlur = 12;
+  ctx.fillStyle = '#ff1111';
+  ctx.beginPath(); ctx.arc(x+17, y+6, 4, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x+27, y+6, 4, 0, Math.PI*2); ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#ffaaaa';
+  ctx.beginPath(); ctx.arc(x+17, y+6, 1.5, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x+27, y+6, 1.5, 0, Math.PI*2); ctx.fill();
+
+  // Feathery antennae
+  ctx.strokeStyle = '#6a2080';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x+18, y-1); ctx.lineTo(x+12, y-12); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x+26, y-1); ctx.lineTo(x+32, y-12); ctx.stroke();
+  // Feather tufts
+  for (let i = 0; i < 3; i++) {
+    ctx.beginPath(); ctx.moveTo(x+12-(i*2), y-12-(i*3)); ctx.lineTo(x+8-(i*2), y-10-(i*3)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x+32+(i*2), y-12-(i*3)); ctx.lineTo(x+36+(i*2), y-10-(i*3)); ctx.stroke();
+  }
+
+  // Legs
+  ctx.strokeStyle = '#2a0a2a';
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(x+16, y+34); ctx.lineTo(x+10, y+42); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x+28, y+34); ctx.lineTo(x+34, y+42); ctx.stroke();
+
+  ctx.restore();
+}
+
+// ─── Game Over ───────────────────────────────────────────────────────────────
+function gameOver() {
+  state = 'over';
+  overlay.style.display = 'flex';
+  const ac = t => catType === t ? ' active' : '';
+  overlay.innerHTML = `
+    <h2>Caught! 😿</h2>
+    <p>Score: <b style="color:#ffe066">${score}</b> &nbsp;·&nbsp; Pick a cat and go again!</p>
+    <div style="display:flex;gap:10px">
+      <button class="cat-btn${ac('calico')}" data-cat="calico">🟠 Calico</button>
+      <button class="cat-btn${ac('black')}"  data-cat="black" >⚫ Black</button>
+      <button class="cat-btn${ac('orange')}" data-cat="orange">🧡 Orange</button>
+    </div>
+    <button id="startBtn">Play Again</button>
+  `;
+  attachCatListeners();
+  document.getElementById('startBtn').addEventListener('click', startGame);
+}
+
+// ─── Main Loop ───────────────────────────────────────────────────────────────
+function loop() {
+  if (state === 'playing') update();
+  draw();
+  raf = requestAnimationFrame(loop);
+}
+
+// Initial draw
+makeStars();
+draw();
+</script>
+</body>
+</html>
