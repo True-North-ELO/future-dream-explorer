@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -7,8 +7,8 @@
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
   body { background: linear-gradient(180deg,#0f3d2e,#1a1a1a); color:#eee; min-height:100vh; padding:10px; overflow-x:hidden; }
   h1 { text-align:center; color:#7fffa1; text-shadow:0 0 10px #2f8f4f; margin-bottom:10px; font-size:28px; }
-  #game { max-width:1320px; margin:auto; display:grid; grid-template-columns: 240px 1fr 280px; gap:10px; }
-  .panel { background:#1e2a22; border:2px solid #3b6b48; border-radius:10px; padding:10px; max-height:92vh; overflow-y:auto; }
+  #game { width:min(98vw,1820px); margin:auto; display:grid; grid-template-columns: minmax(270px,18vw) 1fr minmax(320px,22vw); gap:10px; }
+  .panel { background:#1e2a22; border:2px solid #3b6b48; border-radius:10px; padding:10px; height:calc(100vh - 72px); overflow:hidden; display:flex; flex-direction:column; }
   .panel h2 { color:#7fffa1; font-size:15px; margin-bottom:6px; border-bottom:1px solid #3b6b48; padding-bottom:3px; }
   button { background:#2f6b40; color:#fff; border:none; padding:6px 8px; margin:2px 0; border-radius:5px; cursor:pointer; font-size:12px; width:100%; }
   button:hover:not(:disabled) { background:#41914f; }
@@ -22,8 +22,30 @@
   #speedToggle { background:#444; color:#fff; padding:6px 12px; border-radius:5px; cursor:pointer; font-size:12px; font-weight:bold; }
   #speedToggle.on { background:linear-gradient(90deg,#ff8c00,#ffd700); color:#000; box-shadow:0 0 8px #ffd700; }
 
-  #arena, #parkView { position:relative; width:100%; height:580px; border:2px solid #3b6b48; border-radius:10px; overflow:hidden; }
-  #arena { background: radial-gradient(circle at 20% 30%,#1f4d35 0%,transparent 40%), radial-gradient(circle at 80% 70%,#1f4d35 0%,transparent 40%), linear-gradient(180deg,#2a5a3a,#1a3d28); }
+  #arena, #parkView { position:relative; width:100%; height:clamp(520px,68vh,780px); border:2px solid #3b6b48; border-radius:10px; overflow:hidden; }
+  #arena {
+    background:
+      radial-gradient(ellipse at 18% 22%,rgba(125,180,95,.32) 0%,transparent 42%),
+      radial-gradient(ellipse at 76% 72%,rgba(90,150,85,.26) 0%,transparent 44%),
+      linear-gradient(180deg,#4d8a4a 0%,#3f783f 55%,#2f6432 100%);
+  }
+  #arena::before {
+    content:'';
+    position:absolute;
+    inset:0;
+    background-image: radial-gradient(circle at 12% 18%,rgba(40,90,35,.22) 1px,transparent 2px), radial-gradient(circle at 72% 40%,rgba(40,90,35,.22) 1px,transparent 2px), radial-gradient(circle at 35% 78%,rgba(40,90,35,.22) 1px,transparent 2px);
+    background-size:64px 64px;
+    pointer-events:none;
+    z-index:0;
+  }
+  #arena::after {
+    content:'';
+    position:absolute;
+    inset:0;
+    background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(0,0,0,.18));
+    pointer-events:none;
+    z-index:0;
+  }
   #parkView { background: radial-gradient(ellipse at 30% 20%,rgba(120,180,90,.4) 0%,transparent 50%), radial-gradient(ellipse at 70% 80%,rgba(120,180,90,.4) 0%,transparent 50%), linear-gradient(180deg,#6ba85a 0%,#4d8a3e 60%,#2d5e26 100%); }
   #parkView::before { content:''; position:absolute; inset:0; background-image: radial-gradient(circle at 15% 25%,rgba(40,80,30,.3) 1px,transparent 2px), radial-gradient(circle at 75% 35%,rgba(40,80,30,.3) 1px,transparent 2px); background-size:60px 60px; pointer-events:none; }
 
@@ -34,16 +56,135 @@
   .tollGate { position:absolute; left:78px; top:50%; transform:translateY(-50%); width:12px; height:60px; background:linear-gradient(90deg,#fff 0 4px,#c00 4px 8px,#fff 8px 12px); border:1px solid #333; z-index:2; }
 
   .mainPath { position:absolute; background: linear-gradient(180deg,#d4b890,#a68450); box-shadow: inset 0 0 10px rgba(0,0,0,.3); }
-  .cage { position:absolute; z-index:1; background: radial-gradient(ellipse at center,rgba(80,140,60,.6) 0%,rgba(50,100,40,.7) 100%); border:4px solid #5a4a2a; border-radius:8px; box-shadow: inset 0 0 15px rgba(0,0,0,.4),0 3px 8px rgba(0,0,0,.5); overflow:hidden; }
-  .cage::before { content:''; position:absolute; inset:0; background-image: repeating-linear-gradient(90deg,transparent 0 18px,rgba(180,180,200,.55) 18px 21px); pointer-events:none; }
-  .cageLabel { position:absolute; top:-14px; left:50%; transform:translateX(-50%); background:linear-gradient(180deg,#8b6914,#6b4d10); color:#fff; padding:2px 10px; border-radius:4px; font-size:10px; font-weight:bold; border:1px solid #2a1f0a; z-index:5; text-shadow:1px 1px 1px #000; white-space:nowrap; }
+  .cage {
+    position:absolute;
+    z-index:1;
+    background:
+      radial-gradient(ellipse at 20% 20%,rgba(140,200,120,.28) 0%,transparent 38%),
+      radial-gradient(ellipse at 80% 80%,rgba(80,140,70,.2) 0%,transparent 36%),
+      linear-gradient(180deg,rgba(85,150,65,.58) 0%,rgba(44,95,38,.76) 100%);
+    border:4px solid #5a4a2a;
+    border-radius:10px;
+    box-shadow:
+      inset 0 0 18px rgba(0,0,0,.42),
+      inset 0 -14px 26px rgba(0,0,0,.18),
+      0 6px 14px rgba(0,0,0,.45);
+    overflow:hidden;
+  }
+  .cage.locked {
+    background:
+      radial-gradient(ellipse at 20% 20%,rgba(150,150,150,.15) 0%,transparent 40%),
+      linear-gradient(180deg,rgba(70,70,70,.6) 0%,rgba(36,36,36,.82) 100%);
+    border-color:#4d4d4d;
+    filter: grayscale(.95);
+  }
+  .cage::before { content:''; position:absolute; inset:0; background-image: radial-gradient(circle at 18% 22%,rgba(255,255,255,.06) 1px,transparent 2px), radial-gradient(circle at 72% 68%,rgba(0,0,0,.08) 1px,transparent 2px); background-size:48px 48px; pointer-events:none; }
+  .cage::after { content:''; position:absolute; inset:0; border:1px solid rgba(255,255,255,.08); border-radius:8px; pointer-events:none; }
+  .cageLabel { position:absolute; top:6px; left:50%; transform:translateX(-50%); background:linear-gradient(180deg,#8b6914,#6b4d10); color:#fff; padding:2px 10px; border-radius:4px; font-size:10px; font-weight:bold; border:1px solid #2a1f0a; z-index:5; text-shadow:1px 1px 1px #000; white-space:nowrap; max-width:92%; overflow:hidden; text-overflow:ellipsis; }
   .cageEmpty { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:rgba(255,255,255,.5); font-size:11px; font-style:italic; pointer-events:none; }
   .cageDeco { position:absolute; pointer-events:none; opacity:.85; z-index:2; font-size:16px; }
+  .cagePost {
+    position:absolute;
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:radial-gradient(circle at 30% 30%,#d5be8b,#6c5324);
+    box-shadow:0 0 0 1px rgba(0,0,0,.35);
+    z-index:3;
+  }
+  .cageLock {
+    position:absolute;
+    right:8px;
+    top:8px;
+    font-size:14px;
+    z-index:4;
+    filter:drop-shadow(0 0 4px rgba(0,0,0,.65));
+  }
 
   .deco { position:absolute; pointer-events:none; user-select:none; z-index:1; }
   .pond { position:absolute; border-radius:50%; background:radial-gradient(ellipse at 30% 30%,#87ceeb 0%,#4a90c2 60%,#2a6090 100%); box-shadow: inset 0 2px 4px rgba(255,255,255,.3); z-index:1; }
-  .path { position:absolute; top:50%; left:0; width:100%; height:50px; transform:translateY(-50%); background: repeating-linear-gradient(90deg,#8b6f47 0 20px,#7a5f3a 20px 40px); opacity:.7; }
-  .base { position:absolute; right:5px; top:50%; transform:translateY(-50%); width:60px; height:80px; background:linear-gradient(180deg,#888,#555); border:2px solid #ccc; border-radius:5px; text-align:center; line-height:80px; color:#fff; font-weight:bold; font-size:11px; }
+  .path {
+    position:absolute;
+    top:50%;
+    left:0;
+    width:100%;
+    height:58px;
+    transform:translateY(-50%);
+    background:
+      repeating-linear-gradient(90deg,#8b6f47 0 22px,#7a5f3a 22px 44px),
+      linear-gradient(180deg,rgba(255,255,255,.08),rgba(0,0,0,.15));
+    border-top:2px solid rgba(120,85,45,.45);
+    border-bottom:2px solid rgba(120,85,45,.35);
+    box-shadow:inset 0 0 18px rgba(0,0,0,.38);
+    opacity:.92;
+    z-index:1;
+  }
+  .path::before {
+    content:'';
+    position:absolute;
+    inset:0;
+    background:repeating-linear-gradient(90deg,transparent 0 56px,rgba(0,0,0,.12) 56px 58px);
+    pointer-events:none;
+  }
+  .base {
+    position:absolute;
+    right:6px;
+    top:50%;
+    transform:translateY(-50%);
+    width:68px;
+    height:90px;
+    background:linear-gradient(180deg,#8b8f7a,#5f614f);
+    border:2px solid #d7cfb7;
+    border-radius:6px;
+    text-align:center;
+    line-height:90px;
+    color:#fff;
+    font-weight:bold;
+    font-size:12px;
+    letter-spacing:.3px;
+    box-shadow:0 8px 18px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.16);
+    z-index:4;
+  }
+  .arena-rail {
+    position:absolute;
+    top:18px;
+    bottom:18px;
+    width:16px;
+    border-radius:10px;
+    background:repeating-linear-gradient(180deg,#3a6f2f 0 14px,#2f5c28 14px 28px);
+    box-shadow:inset 0 0 6px rgba(0,0,0,.25);
+    opacity:.95;
+    z-index:2;
+  }
+  .arena-rail.left { left:14px; }
+  .arena-rail.right { right:84px; }
+  .arena-hazard {
+    position:absolute;
+    left:0;
+    right:0;
+    top:calc(50% - 36px);
+    height:14px;
+    background:repeating-linear-gradient(90deg,#2f6a2f 0 12px,#3c7a3b 12px 24px);
+    border-top:1px solid rgba(25,50,20,.45);
+    border-bottom:1px solid rgba(25,50,20,.45);
+    opacity:.85;
+    z-index:2;
+    box-shadow:0 0 6px rgba(25,60,20,.35);
+  }
+  .arena-hazard.bottom { top:calc(50% + 24px); }
+  .arena-scan {
+    position:absolute;
+    left:0;
+    top:0;
+    width:100%;
+    height:34px;
+    background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,0));
+    box-shadow:none;
+    animation: arenaScan 10s linear infinite;
+    z-index:2;
+    pointer-events:none;
+  }
+  @keyframes arenaScan { 0%{transform:translateY(-34px)} 100%{transform:translateY(640px)} }
 
   .entity { position:absolute; transition:left .15s linear, top .15s linear; user-select:none; z-index:3; pointer-events:none; }
   .entity.dino { cursor:pointer; pointer-events:auto; }
@@ -78,8 +219,22 @@
   .mini-stat span { color:#7fffa1; }
   .actions { display:flex; gap:3px; margin-top:4px; flex-wrap:wrap; }
   .actions button { font-size:10px; padding:3px 5px; flex:1; min-width:48px; }
+  .shop-grid { display:grid; grid-template-columns:1fr 1fr; gap:4px; }
+  .shop-grid .wide { grid-column:1 / -1; }
+  .roster-panel { overflow-y:hidden; }
+  #dinoList { display:grid; grid-template-columns:1fr 1fr; gap:6px; overflow:hidden; }
+  #dinoList .card { margin-bottom:0; }
 
-  #log { background:#0d1a13; border:1px solid #2b4b35; border-radius:6px; padding:6px; height:120px; overflow-y:auto; font-size:11px; margin-top:6px; }
+  /* Compact left sidebar so all content fits one page */
+  #leftSidebar { gap:4px; }
+  #leftSidebar h2 { font-size:14px; margin-bottom:5px; padding-bottom:2px; }
+  #leftSidebar .stat { font-size:12px; padding:2px 0; }
+  #leftSidebar button { padding:5px 6px; margin:1px 0; font-size:11.5px; line-height:1.2; }
+  #leftSidebar .shop-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:4px; }
+  #leftSidebar .shop-grid .wide { grid-column:1 / -1; }
+  #leftSidebar .egg-odds { font-size:9.5px; line-height:1.25; padding:3px 0 5px 0; color:#a9b7aa; }
+
+  #log { background:#0d1a13; border:1px solid #2b4b35; border-radius:6px; padding:6px; height:80px; overflow:hidden; font-size:11px; margin-top:6px; }
   #log div { padding:1px 0; border-bottom:1px dotted #1a3a25; }
 
   #waveBanner { text-align:center; padding:6px; background:#243a2c; border-radius:6px; margin-bottom:6px; font-weight:bold; font-size:14px; }
@@ -102,58 +257,80 @@
 <body>
 <h1>Dino Park Defender</h1>
 <div id="game">
-  <div class="panel">
+  <div class="panel" id="leftSidebar">
     <h2>Stats</h2>
-    <div class="stat"><span>Money</span><span id="sMoney">200</span></div>
-    <div class="stat"><span>Food</span><span id="sFood">20</span></div>
+    <div class="stat"><span>Money</span><span id="sMoney">300</span></div>
+    <div class="stat"><span>Food</span><span id="sFood">30</span></div>
     <div class="stat"><span>Park HP</span><span id="sHP">100/100</span></div>
     <div class="stat"><span>Wave</span><span id="sWave">0</span></div>
     <div class="stat"><span>Score</span><span id="sScore">0</span></div>
     <div class="stat"><span>Armory</span><span id="sArmory">0</span></div>
-    <div class="stat"><span>Cages</span><span id="sCages">0/6</span></div>
+    <div class="stat"><span>Exhibits</span><span id="sCages">0/6</span></div>
 
     <h2 style="margin-top:10px;">Egg Shop</h2>
-    <button onclick="buyEgg('common')">Common — 50</button>
-    <button onclick="buyEgg('rare')">Rare — 150</button>
-    <button onclick="buyEgg('epic')">Epic — 400</button>
-    <button onclick="buyEgg('ancient')">Ancient — 700</button>
-    <button onclick="buyEgg('legendary')">Legendary — 1000</button>
-    <button onclick="buyEgg('mythic')">Mythic — 2500</button>
-    <button onclick="buyEgg('dragon')" style="background:linear-gradient(45deg,#c81e1e,#ff7e1a);color:#000;font-weight:bold;">DRAGON HERO — 5000</button>
+    <div class="shop-grid">
+      <button onclick="buyEgg('common')">Common — 60</button>
+      <button onclick="buyEgg('rare')">Rare — 220</button>
+      <button onclick="buyEgg('epic')">Epic — 550</button>
+      <button onclick="buyEgg('ancient')">Ancient — 1100</button>
+      <button onclick="buyEgg('legendary')">Legendary — 2200</button>
+      <button onclick="buyEgg('mythic')">Mythic — 4200</button>
+      <button onclick="buyEgg('dragon')" class="wide" style="background:linear-gradient(45deg,#c81e1e,#ff7e1a);color:#000;font-weight:bold;">Dragon Hero Egg — 8000</button>
+      <button onclick="spinEggWheel()" id="btnEggSpin" class="wide" style="background:linear-gradient(45deg,#6a3,#fc8);color:#111;font-weight:bold;">Spin Egg Wheel — 220</button>
+    </div>
+    <div class="egg-odds">Odds: Common 52% • Rare 25% • Epic 12% • Ancient 6% • Legendary 3% • Mythic 1.5% • Dragon 0.5%</div>
+    <button onclick="openEncyclopedia()" style="background:#365c88;">Open Dino Notebook</button>
 
     <h2 style="margin-top:10px;">Armor Shop</h2>
-    <button onclick="buyArmor('leather')">Leather — 75 (+15HP/+2DEF)</button>
-    <button onclick="buyArmor('iron')">Iron — 200 (+40HP/+5DEF)</button>
-    <button onclick="buyArmor('steel')">Steel — 500 (+90HP/+10DEF)</button>
-    <button onclick="buyArmor('dragonscale')">Dragonscale — 1200 (+200HP/+20DEF)</button>
+    <div class="shop-grid">
+      <button onclick="buyArmor('leather')">Leather — 75</button>
+      <button onclick="buyArmor('iron')">Iron — 200</button>
+      <button onclick="buyArmor('steel')">Steel — 500</button>
+      <button onclick="buyArmor('dragonscale')">Dragonscale — 1200</button>
+    </div>
 
     <h2 style="margin-top:10px;">Supplies</h2>
-    <button onclick="buyFood()">Food — 20 (+10)</button>
-    <button onclick="repairBase()">Repair — 30 (+20HP)</button>
-    <button onclick="upgradeBase()">Upgrade Max HP — 100 (+25)</button>
+    <div class="shop-grid">
+      <button onclick="buyFood()">Food — 20 (+10)</button>
+      <button onclick="repairBase()">Repair — 30 (+20HP)</button>
+      <button onclick="upgradeBase()">Upgrade Max HP — 100 (+25)</button>
+      <button onclick="buildCage()" id="btnBuildCage">Build Exhibit Slot</button>
+    </div>
+
+    <h2 style="margin-top:10px;">Park Upgrades</h2>
+    <div class="shop-grid">
+      <button onclick="buyParkUpgrade('vet')" id="btnUpVet">Vet Clinic</button>
+      <button onclick="buyParkUpgrade('souvenir')" id="btnUpSouvenir">Souvenir Shop</button>
+      <button onclick="buyParkUpgrade('marketing')" id="btnUpMarketing" class="wide">Marketing Campaign</button>
+    </div>
   </div>
 
   <div class="panel">
     <div class="tabs">
       <div class="tab active" id="tabPark" onclick="switchView('park')">Zoo Park</div>
-      <div class="tab" id="tabArena" onclick="switchView('arena')">Defense Arena</div>
+      <div class="tab" id="tabArena" onclick="switchView('arena')">Defend</div>
       <div id="speedToggle" onclick="toggleSpeed()">&gt;&gt; 1x</div>
     </div>
-    <div id="waveBanner">Build your zoo! Hatch dinos and welcome tourists.</div>
+    <div id="waveBanner">Build your park, then defend it from raiders!</div>
     <div id="parkView"></div>
     <div id="arena" style="display:none;">
       <div class="path"></div>
+      <div class="arena-hazard"></div>
+      <div class="arena-hazard bottom"></div>
+      <div class="arena-rail left"></div>
+      <div class="arena-rail right"></div>
+      <div class="arena-scan"></div>
       <div class="base">PARK</div>
     </div>
     <div style="display:flex; gap:5px; margin-top:8px;">
       <button id="btnTourist" onclick="openToTourists()">Open to Tourists</button>
-      <button id="btnWave" onclick="startWave()">Start Wave</button>
+      <button id="btnWave" onclick="startWave()">Defend Park</button>
     </div>
     <div id="log"></div>
   </div>
 
-  <div class="panel">
-    <h2>Roster (max 6)</h2>
+  <div class="panel roster-panel">
+    <h2 id="rosterTitle">Roster</h2>
     <div id="dinoList"></div>
   </div>
 </div>
@@ -463,23 +640,56 @@ function getTouristSVG(){
 /* ============ STATE ============ */
 const MAX_DINOS = 6;
 const STATE = {
-  money:200, food:20, hp:100, hpMax:100,
+  money:300, food:30, hp:100, hpMax:100,
   wave:0, score:0,
   dinos:[], armory:[], enemies:[],
   inWave:false, view:'park',
   touristActive:false, touristUsedThisWave:false,
-  bossActive:false, nextId:1, speedMult:1
+  bossActive:false, nextId:1, speedMult:1,
+  unlockedCages:2,
+  parkUpgrades:{ vet:0, souvenir:0, marketing:0 }
+};
+
+const PARK_UPGRADE_DEFS = {
+  vet: {
+    label:'Vet Clinic',
+    max:3,
+    desc:'+12% between-wave heal',
+    cost:(lvl)=>Math.floor(180*Math.pow(lvl+1,1.5))
+  },
+  souvenir: {
+    label:'Souvenir Shop',
+    max:4,
+    desc:'+12% tourist income, +1 guest cap',
+    cost:(lvl)=>Math.floor(220*Math.pow(lvl+1,1.5))
+  },
+  marketing: {
+    label:'Marketing',
+    max:3,
+    desc:'+12% attraction, +2s tourist time',
+    cost:(lvl)=>Math.floor(200*Math.pow(lvl+1,1.55))
+  }
 };
 
 const DINO_TYPES = {
-  common:    { names:['Compy','Dilo','Gallimimus'], hpRange:[20,40], atkRange:[3,6], spdRange:[1.5,2.5], rangeRange:[60,80], cost:50, income:1 },
-  rare:      { names:['Velociraptor','Stegosaurus','Ankylosaurus'], hpRange:[60,90], atkRange:[8,14], spdRange:[1.2,2.0], rangeRange:[80,100], cost:150, income:3 },
-  epic:      { names:['Triceratops','Spinosaurus','Allosaurus'], hpRange:[120,180], atkRange:[15,25], spdRange:[1.0,1.6], rangeRange:[100,120], cost:400, income:8 },
-  ancient:   { names:['Carnotaurus','Therizinosaurus','Pachycephalosaurus'], hpRange:[180,250], atkRange:[25,40], spdRange:[0.9,1.5], rangeRange:[110,130], cost:700, income:15 },
-  legendary: { names:['T-Rex','Indominus','Giganotosaurus'], hpRange:[250,350], atkRange:[35,55], spdRange:[0.8,1.4], rangeRange:[120,150], cost:1000, income:25 },
-  mythic:    { names:['Quetzalcoatlus','Mosasaurus','Archaeopteryx'], hpRange:[500,750], atkRange:[70,100], spdRange:[0.7,1.2], rangeRange:[140,180], cost:2500, income:50 },
-  dragon:    { names:['Inferno','Frostwing','Thunderscale','Voidmaw'], hpRange:[800,1200], atkRange:[120,180], spdRange:[1.4,2.0], rangeRange:[180,220], cost:5000, income:100 }
+  common:    { names:['Compy','Dilo','Gallimimus'], hpRange:[24,44], atkRange:[4,7], spdRange:[1.5,2.5], rangeRange:[60,82], cost:60, income:1 },
+  rare:      { names:['Velociraptor','Stegosaurus','Ankylosaurus'], hpRange:[70,110], atkRange:[10,16], spdRange:[1.2,2.0], rangeRange:[84,106], cost:220, income:3 },
+  epic:      { names:['Triceratops','Spinosaurus','Allosaurus'], hpRange:[150,230], atkRange:[19,30], spdRange:[1.0,1.6], rangeRange:[104,126], cost:550, income:7 },
+  ancient:   { names:['Carnotaurus','Therizinosaurus','Pachycephalosaurus'], hpRange:[240,340], atkRange:[34,52], spdRange:[0.9,1.5], rangeRange:[114,138], cost:1100, income:13 },
+  legendary: { names:['T-Rex','Indominus','Giganotosaurus'], hpRange:[380,560], atkRange:[55,85], spdRange:[0.8,1.4], rangeRange:[126,160], cost:2200, income:22 },
+  mythic:    { names:['Quetzalcoatlus','Mosasaurus','Archaeopteryx'], hpRange:[700,980], atkRange:[95,140], spdRange:[0.7,1.2], rangeRange:[150,195], cost:4200, income:38 },
+  dragon:    { names:['Inferno','Frostwing','Thunderscale','Voidmaw'], hpRange:[1200,1650], atkRange:[160,240], spdRange:[1.4,2.0], rangeRange:[190,240], cost:8000, income:70 }
 };
+
+const EGG_WHEEL = [
+  { rarity:'common', weight:52 },
+  { rarity:'rare', weight:25 },
+  { rarity:'epic', weight:12 },
+  { rarity:'ancient', weight:6 },
+  { rarity:'legendary', weight:3 },
+  { rarity:'mythic', weight:1.5 },
+  { rarity:'dragon', weight:0.5 }
+];
 
 const ARMOR_TYPES = {
   leather:     { name:'Leather',     cost:75,   hp:15,  def:2 },
@@ -500,6 +710,26 @@ const BOSS_TYPES = [
   { name:'Dragon Slayer' },
   { name:'Alien Overlord' }
 ];
+
+const LEVEL_CAPS = {
+  common: 8,
+  rare: 14,
+  epic: 18,
+  ancient: 22,
+  legendary: 26,
+  mythic: 30,
+  dragon: 34
+};
+
+const STAT_CAPS = {
+  common:    { hp:180,  atk:24,  spd:3.2, range:130 },
+  rare:      { hp:420,  atk:60,  spd:3.2, range:180 },
+  epic:      { hp:760,  atk:105, spd:2.8, range:220 },
+  ancient:   { hp:1100, atk:150, spd:2.6, range:250 },
+  legendary: { hp:1600, atk:220, spd:2.4, range:290 },
+  mythic:    { hp:2600, atk:360, spd:2.2, range:340 },
+  dragon:    { hp:3800, atk:520, spd:2.4, range:420 }
+};
 
 const ABILITIES = {
   'Compy':              { name:'Swarm Bite',  cd:4000, type:'multi',  hits:3, mult:0.7, desc:'3 quick bites' },
@@ -537,8 +767,21 @@ function log(msg,color='#bdf'){
   while(el.children.length>40) el.removeChild(el.lastChild);
 }
 function pay(a){ if(STATE.money<a){log(`Not enough money (need ${a})`,'#f88');return false;} STATE.money-=a; return true; }
-function xpForNext(level){ return 5 + level*3; }
+function xpForNext(level){ return Math.floor(8 + level*5 + level*level*0.8); }
 function effAtk(d){ const now=Date.now(); return (d.buffUntil&&now<d.buffUntil) ? Math.floor(d.atk*d.buffMult) : d.atk; }
+function getLevelCap(rarity){ return LEVEL_CAPS[rarity] || 20; }
+function canLevelUp(d){ return d.level < getLevelCap(d.rarity); }
+function clampDinoStats(d){
+  const cap = STAT_CAPS[d.rarity] || STAT_CAPS.rare;
+  d.hpMax = Math.min(d.hpMax, cap.hp);
+  d.atk = Math.min(d.atk, cap.atk);
+  d.spd = +Math.min(d.spd, cap.spd).toFixed(2);
+  d.range = Math.min(d.range, cap.range);
+  d.hp = Math.min(d.hp, d.hpMax);
+}
+function isEvolutionReady(d){
+  return d.rarity==='common' && d.level>=getLevelCap('common');
+}
 
 /* ============ SPEED ============ */
 function toggleSpeed(){
@@ -553,11 +796,38 @@ function toggleSpeed(){
 function buyFood(){ if(pay(20)){STATE.food+=10;log('+10 food');updateStats();} }
 function repairBase(){ if(STATE.hp>=STATE.hpMax){log('Already full HP','#fa6');return;} if(pay(30)){STATE.hp=Math.min(STATE.hpMax,STATE.hp+20);log('Park repaired');updateStats();} }
 function upgradeBase(){ if(pay(100)){STATE.hpMax+=25;STATE.hp+=25;log('Max HP +25');updateStats();} }
+function buyParkUpgrade(type){
+  const def=PARK_UPGRADE_DEFS[type];
+  if(!def) return;
+  const lvl=STATE.parkUpgrades[type]||0;
+  if(lvl>=def.max){ log(`${def.label} already maxed.`, '#fa6'); return; }
+  const cost=def.cost(lvl);
+  if(!pay(cost)) return;
+  STATE.parkUpgrades[type]=lvl+1;
+  log(`${def.label} upgraded to L${STATE.parkUpgrades[type]}!`,'#7fffa1');
+  updateStats();
+}
+function nextCageCost(){ return 120 + Math.max(0,STATE.unlockedCages-2)*180; }
+function buildCage(){
+  if(STATE.unlockedCages>=MAX_DINOS){ log('All cages are already unlocked!','#fa6'); return; }
+  const cost=nextCageCost();
+  if(!pay(cost)) return;
+  STATE.unlockedCages++;
+  log(`Built exhibit slot ${STATE.unlockedCages}/${MAX_DINOS} for ${cost}$`,'#7fffa1');
+  updateStats(); renderPark();
+}
 
 /* ============ EGGS ============ */
 function buyEgg(rarity){
-  if(STATE.dinos.length>=MAX_DINOS){ log(`Max ${MAX_DINOS} dinos! Sell one first.`,'#f88'); return; }
-  const t=DINO_TYPES[rarity]; if(!pay(t.cost))return;
+  return hatchDino(rarity, false);
+}
+
+function hatchDino(rarity, skipCost=false){
+  if(STATE.dinos.length>=STATE.unlockedCages){
+    log('No free exhibit slots. Build another exhibit first.','#f88');
+    return false;
+  }
+  const t=DINO_TYPES[rarity]; if(!skipCost && !pay(t.cost))return false;
   const idx=Math.floor(Math.random()*t.names.length);
   const name=t.names[idx];
   const dino={
@@ -566,6 +836,7 @@ function buyEgg(rarity){
     atk:rndi(t.atkRange[0],t.atkRange[1]),
     spd:+rnd(t.spdRange[0],t.spdRange[1]).toFixed(2),
     range:rndi(t.rangeRange[0],t.rangeRange[1]),
+    baseHp:0, baseAtk:0, baseSpd:0, baseRange:0,
     level:1, xp:0, armor:null,
     x:0,y:0, homeX:0,homeY:0,homeW:0,homeH:0,
     vx:rnd(-.8,.8), vy:rnd(-.8,.8),
@@ -574,11 +845,62 @@ function buyEgg(rarity){
     isDragon:rarity==='dragon',
     ability: ABILITIES[name] ? name : null
   };
+  dino.baseHp=dino.hpMax; dino.baseAtk=dino.atk; dino.baseSpd=dino.spd; dino.baseRange=dino.range;
+  clampDinoStats(dino);
   dino.hp=dino.hpMax;
   STATE.dinos.push(dino);
   assignCages();
   log(`Hatched <b>${dino.name}</b> (${rarity})${dino.ability?' — '+ABILITIES[name].name:''}!`,'#7fffa1');
   updateStats(); renderDinos(); renderPark();
+  return true;
+}
+
+function weightedPick(list){
+  const total=list.reduce((s,x)=>s+x.weight,0);
+  let r=Math.random()*total;
+  for(const item of list){
+    r-=item.weight;
+    if(r<=0) return item;
+  }
+  return list[list.length-1];
+}
+
+function spinEggWheel(){
+  const spinCost=220;
+  if(STATE.dinos.length>=STATE.unlockedCages){ log('No free exhibit slots. Build another exhibit first.','#f88'); return; }
+  if(!pay(spinCost)) return;
+
+  const picks=[];
+  for(let i=0;i<22;i++) picks.push(weightedPick(EGG_WHEEL).rarity);
+  const finalRarity=picks[picks.length-1];
+
+  let html=`<h3>🎡 Egg Wheel</h3>
+    <div style="font-size:13px;color:#bbb;margin-bottom:8px;">Spinning for your surprise egg...</div>
+    <div id="wheelTicker" style="font-size:24px;font-weight:bold;text-align:center;padding:14px;border:1px solid #3b6b48;border-radius:8px;background:#13251b;">?</div>
+    <button style="background:#666;margin-top:10px;" onclick="closeModal()">Close</button>`;
+  document.getElementById('modalContent').innerHTML=html;
+  document.getElementById('modal').classList.add('show');
+
+  let i=0;
+  const iv=setInterval(()=>{
+    const tick=document.getElementById('wheelTicker');
+    if(!tick){ clearInterval(iv); return; }
+    tick.textContent=(picks[i]||finalRarity).toUpperCase();
+    tick.className='badge '+(picks[i]||finalRarity);
+    i++;
+    if(i>=picks.length){
+      clearInterval(iv);
+      setTimeout(()=>{
+        const ok=hatchDino(finalRarity, true);
+        if(!ok) STATE.money+=spinCost;
+        const mc=document.getElementById('modalContent');
+        if(!mc) return;
+        mc.innerHTML=`<h3>🎉 Wheel Result</h3>
+          <p style="margin:8px 0;">You won a <span class="badge ${finalRarity}">${finalRarity}</span> egg!</p>
+          <button onclick="closeModal()">Awesome</button>`;
+      }, 250);
+    }
+  }, 90);
 }
 
 /* ============ ARMOR ============ */
@@ -621,16 +943,31 @@ function unequipArmor(id){
 
 /* ============ LEVEL UP & TRAINING ============ */
 function applyLevelUp(d, source){
-  d.level++; d.xp = 0;
-  d.atk = Math.floor(d.atk * 1.25);
-  d.hpMax = Math.floor(d.hpMax * 1.20);
+  if(!canLevelUp(d)){
+    if(isEvolutionReady(d)) log(`${d.name} reached max common level. Evolve it in the roster!`,'#fc8');
+    else log(`${d.name} reached max level (${getLevelCap(d.rarity)}).`,'#fc8');
+    d.xp = Math.min(d.xp, xpForNext(d.level));
+    return false;
+  }
+  d.level++;
+  d.xp = 0;
+  d.atk = Math.floor(d.atk * 1.12);
+  d.hpMax = Math.floor(d.hpMax * 1.10);
   d.hp = d.hpMax;
-  d.range += 5;
-  d.spd = +(d.spd * 1.05).toFixed(2);
+  d.range += 3;
+  d.spd = +(d.spd * 1.02).toFixed(2);
+  clampDinoStats(d);
   log(`${d.name} -> L${d.level} ${source==='combat'?'(combat)':'(training)'}`,'#7fffa1');
+  return true;
 }
 function trainDino(id){
   const d=STATE.dinos.find(x=>x.id===id); if(!d)return;
+  if(!canLevelUp(d)){
+    if(isEvolutionReady(d)) log(`${d.name} is ready to evolve!`,'#fc8');
+    else log(`${d.name} is at level cap.`,'#fa6');
+    renderDinos();
+    return;
+  }
   const cost=50*d.level; if(!pay(cost))return;
   applyLevelUp(d,'training'); updateStats(); renderDinos();
 }
@@ -638,6 +975,7 @@ function trainSpeed(id){
   const d=STATE.dinos.find(x=>x.id===id); if(!d)return;
   const cost=40*d.level; if(!pay(cost))return;
   d.spd = +(d.spd * 1.12).toFixed(2);
+  clampDinoStats(d);
   log(`${d.name} +12% speed -> ${d.spd}`,'#fc8');
   updateStats(); renderDinos();
 }
@@ -645,8 +983,32 @@ function trainRange(id){
   const d=STATE.dinos.find(x=>x.id===id); if(!d)return;
   const cost=40*d.level; if(!pay(cost))return;
   d.range += 15;
+  clampDinoStats(d);
   log(`${d.name} +15 range -> ${d.range}`,'#fc8');
   updateStats(); renderDinos();
+}
+function evolveCommonDino(id){
+  const d=STATE.dinos.find(x=>x.id===id); if(!d) return;
+  if(!isEvolutionReady(d)){ log(`${d.name} is not ready to evolve yet.`,'#fa6'); return; }
+  const evoCost=250;
+  if(!pay(evoCost)) return;
+  const t=DINO_TYPES.rare;
+  const evoName=choice(t.names);
+  d.rarity='rare';
+  d.name=evoName;
+  d.level=1;
+  d.xp=0;
+  d.hpMax=Math.max(rndi(t.hpRange[0],t.hpRange[1]), Math.floor(d.hpMax*1.25));
+  d.atk=Math.max(rndi(t.atkRange[0],t.atkRange[1]), Math.floor(d.atk*1.25));
+  d.spd=Math.max(+rnd(t.spdRange[0],t.spdRange[1]).toFixed(2), +(d.spd*1.06).toFixed(2));
+  d.range=Math.max(rndi(t.rangeRange[0],t.rangeRange[1]), d.range+10);
+  d.isDragon=false;
+  d.ability=ABILITIES[evoName]?evoName:null;
+  d.baseHp=d.hpMax; d.baseAtk=d.atk; d.baseSpd=d.spd; d.baseRange=d.range;
+  clampDinoStats(d);
+  d.hp=d.hpMax;
+  log(`${d.name} evolved into a rare dinosaur!`,'#7fffa1');
+  updateStats(); renderDinos(); renderPark();
 }
 function feedDino(id){
   const d=STATE.dinos.find(x=>x.id===id); if(!d)return;
@@ -673,19 +1035,23 @@ function openToTourists(){
 
   STATE.touristActive=true;
   let elapsed=0,totalMoney=0,totalFood=0,totalTourists=0;
-  const dur=15000;
-  const mult={common:1,rare:3,epic:8,ancient:15,legendary:25,mythic:50,dragon:100};
-  const attract=STATE.dinos.reduce((s,d)=>s+mult[d.rarity]*d.level,0);
+  const marketingLvl=STATE.parkUpgrades.marketing||0;
+  const souvenirLvl=STATE.parkUpgrades.souvenir||0;
+  const dur=15000 + marketingLvl*2000;
+  const mult={common:1,rare:2.2,epic:4.5,ancient:7,legendary:10,mythic:14,dragon:18};
+  const baseAttract=STATE.dinos.reduce((s,d)=>s+mult[d.rarity]*d.level,0);
+  const attract=Math.floor(baseAttract*(1+marketingLvl*0.12));
   log(`Park opened! Attractiveness: ${attract}`,'#fc8');
 
   const iv=setInterval(()=>{
     elapsed+=500/STATE.speedMult;
-    const burst=Math.max(1,Math.floor(attract/8));
-    for(let i=0;i<Math.min(burst,5);i++) spawnTourist();
+    const burst=Math.max(1,Math.floor(attract/12));
+    for(let i=0;i<Math.min(burst,3+souvenirLvl);i++) spawnTourist();
     STATE.dinos.forEach(d=>{
-      const inc=DINO_TYPES[d.rarity].income*d.level;
+      const lvlScale=Math.min(1.8, 0.45 + d.level*0.07);
+      const inc=Math.max(1, Math.floor(DINO_TYPES[d.rarity].income*lvlScale*(1+souvenirLvl*0.12)));
       totalMoney+=inc; STATE.money+=inc;
-      if(Math.random()<.3){totalFood++;STATE.food++;}
+      if(Math.random()<.2){totalFood++;STATE.food++;}
     });
     totalTourists+=burst;
     updateStats();
@@ -707,7 +1073,7 @@ function spawnTourist(){
   t.style.left='90px'; t.style.top=midY+'px'; t.style.zIndex='4';
   park.appendChild(t);
 
-  const cages = getCages();
+  const cages = getCages().slice(0,STATE.unlockedCages);
   const stops = [];
   const visits = cages.filter(()=>Math.random()<0.45).slice(0,2)
     .sort((a,b)=>(a.x+a.w/2)-(b.x+b.w/2));
@@ -759,7 +1125,7 @@ function getCages(){
 function assignCages(){
   const cages=getCages();
   STATE.dinos.forEach((d,i)=>{
-    const c=cages[i]; if(!c)return;
+    const c=cages[i]; if(!c || i>=STATE.unlockedCages)return;
     d.cageSlot=i;
     d.homeX=c.x; d.homeY=c.y; d.homeW=c.w; d.homeH=c.h;
     if(d.x<c.x||d.x>c.x+c.w||d.y<c.y||d.y>c.y+c.h){
@@ -862,7 +1228,7 @@ function startWave(){
   const isBoss=STATE.wave%5===0; STATE.bossActive=isBoss;
   const banner=document.getElementById('waveBanner');
   if(isBoss){ banner.classList.add('boss'); banner.innerHTML=`!! BOSS WAVE ${STATE.wave} !!`; log(`BOSS WAVE ${STATE.wave}!`,'#fc4'); }
-  else { banner.classList.remove('boss'); banner.innerHTML=`Wave ${STATE.wave} — Defend!`; log(`Wave ${STATE.wave}!`,'#7fffa1'); }
+  else { banner.classList.remove('boss'); banner.innerHTML=`Wave ${STATE.wave} — Defend the Park!`; log(`Defend the park! Wave ${STATE.wave} started.`,'#7fffa1'); }
   const arena=document.getElementById('arena');
   STATE.dinos.forEach((d,i)=>{
     const row=Math.floor(i/3), col=i%3;
@@ -874,32 +1240,35 @@ function startWave(){
 }
 
 function spawnEnemies(isBoss){
-  const count=4+Math.floor(STATE.wave*1.3); let spawned=0;
+  const count=3+Math.floor(STATE.wave*0.85); let spawned=0;
   const arena=document.getElementById('arena');
+  const tierIdx=Math.min(ENEMY_TYPES.length-1,Math.floor((STATE.wave-1)/4));
+  const hpScale=1+STATE.wave*0.14;
+  const atkScale=1+STATE.wave*0.10;
   if(isBoss){
     const b=BOSS_TYPES[(STATE.wave/5-1)%BOSS_TYPES.length];
-    const tier=ENEMY_TYPES[Math.min(ENEMY_TYPES.length-1,Math.floor(STATE.wave/3))];
+    const tier=ENEMY_TYPES[tierIdx];
     const boss={
       id:STATE.nextId++,name:b.name,isBoss:true,
-      hpMax:Math.floor(tier.hp*STATE.wave*6),
-      atk:Math.floor(tier.atk*2.5), spd:tier.spd*0.7,
+      hpMax:Math.floor(tier.hp*(4+STATE.wave*2.2)),
+      atk:Math.floor(tier.atk*(1.8+STATE.wave*0.06)), spd:tier.spd*0.68,
       x:-40,y:arena.offsetHeight/2,lastAtk:0,
-      xpReward: 25 + STATE.wave*3
+      xpReward: 18 + STATE.wave*2
     };
     boss.hp=boss.hpMax; STATE.enemies.push(boss);
   }
   const iv=setInterval(()=>{
     if(spawned>=count){clearInterval(iv);return;}
-    const tier=ENEMY_TYPES[Math.min(ENEMY_TYPES.length-1,Math.floor(STATE.wave/3))];
+    const tier=ENEMY_TYPES[tierIdx];
     const e={
       id:STATE.nextId++,name:tier.name,isBoss:false,
-      hpMax:Math.floor(tier.hp*(1+STATE.wave*.25)),
-      atk:Math.floor(tier.atk*(1+STATE.wave*.15)),
+      hpMax:Math.floor(tier.hp*hpScale),
+      atk:Math.floor(tier.atk*atkScale),
       spd:tier.spd, x:-30, y:arena.offsetHeight/2+rnd(-50,50), lastAtk:0,
-      xpReward: tier.xp + Math.floor(STATE.wave/2)
+      xpReward: tier.xp + Math.floor(STATE.wave/3)
     };
     e.hp=e.hpMax; STATE.enemies.push(e); spawned++;
-  }, 800/STATE.speedMult);
+  }, 900/STATE.speedMult);
 }
 
 function combatTick(){
@@ -1021,10 +1390,11 @@ function onEnemyKilled(e,killer){
   const xpGain=e.xpReward||1;
   killer.xp=(killer.xp||0)+xpGain;
   showFloat(document.getElementById('arena'),killer.x,killer.y-10,`+${xpGain}XP`,'#fc8');
-  while(killer.xp>=xpForNext(killer.level)){
+  while(canLevelUp(killer) && killer.xp>=xpForNext(killer.level)){
     killer.xp-=xpForNext(killer.level);
     applyLevelUp(killer,'combat');
   }
+  if(!canLevelUp(killer)) killer.xp = xpForNext(killer.level);
   updateStats();
 }
 
@@ -1033,8 +1403,9 @@ function endWave(){
   const bonus=50+STATE.wave*15; STATE.money+=bonus; STATE.score+=STATE.wave*20;
   log(`Wave ${STATE.wave} cleared! +${bonus} money`,'#7fffa1');
   document.getElementById('waveBanner').classList.remove('boss');
-  document.getElementById('waveBanner').innerHTML=`Wave ${STATE.wave} cleared! Open the park to tourists.`;
-  STATE.dinos.forEach(d=>{d.hp=Math.min(d.hpMax,d.hp+Math.floor(d.hpMax*.3));});
+  document.getElementById('waveBanner').innerHTML=`Perimeter secured! Open the park to tourists.`;
+  const healPct=Math.min(0.75,0.3 + (STATE.parkUpgrades.vet||0)*0.12);
+  STATE.dinos.forEach(d=>{d.hp=Math.min(d.hpMax,d.hp+Math.floor(d.hpMax*healPct));});
   switchView('park'); assignCages();
   updateStats(); renderDinos(); renderPark();
 }
@@ -1066,6 +1437,25 @@ function closeModal(){
   document.getElementById('modal').classList.remove('show');
 }
 
+function openEncyclopedia(){
+  let html='<h3>📘 Dino Notebook</h3>';
+  html+='<p style="margin-bottom:8px;color:#bbb;">Rarities, level caps, species and signature abilities.</p>';
+  Object.keys(DINO_TYPES).forEach(r=>{
+    const t=DINO_TYPES[r];
+    html+=`<div class="card" style="margin-bottom:8px;">
+      <div><span class="badge ${r}">${r}</span> <span style="font-size:11px;color:#bbb;">L cap: ${getLevelCap(r)}</span></div>
+      <div style="margin-top:4px;font-size:11px;color:#ddd;">${t.names.join(', ')}</div>`;
+    t.names.forEach(n=>{
+      const a=ABILITIES[n];
+      if(a) html+=`<div style="font-size:10px;color:#fc8;margin-top:2px;">• ${n}: ${a.name} — ${a.desc}</div>`;
+    });
+    html+='</div>';
+  });
+  html+='<button style="background:#666;margin-top:8px;" onclick="closeModal()">Close</button>';
+  document.getElementById('modalContent').innerHTML=html;
+  document.getElementById('modal').classList.add('show');
+}
+
 /* ============ RENDER: STATS ============ */
 function updateStats(){
   document.getElementById('sMoney').textContent=fmt(STATE.money);
@@ -1074,7 +1464,30 @@ function updateStats(){
   document.getElementById('sWave').textContent=STATE.wave;
   document.getElementById('sScore').textContent=STATE.score;
   document.getElementById('sArmory').textContent=STATE.armory.length;
-  document.getElementById('sCages').textContent=`${STATE.dinos.length}/${MAX_DINOS}`;
+  document.getElementById('sCages').textContent=`${STATE.dinos.length}/${STATE.unlockedCages} (max ${MAX_DINOS})`;
+  const b=document.getElementById('btnBuildCage');
+  if(b){
+    b.disabled = STATE.unlockedCages>=MAX_DINOS;
+    b.textContent = STATE.unlockedCages>=MAX_DINOS ? 'All Exhibits Unlocked' : `Build Exhibit — ${nextCageCost()}$`;
+  }
+  const setUpgradeBtn=(id,key)=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    const def=PARK_UPGRADE_DEFS[key];
+    const lvl=STATE.parkUpgrades[key]||0;
+    if(lvl>=def.max){
+      el.disabled=true;
+      el.textContent=`${def.label} MAX`;
+      return;
+    }
+    el.disabled=false;
+    el.textContent=`${def.label} L${lvl} → L${lvl+1} — ${def.cost(lvl)}$`;
+  };
+  setUpgradeBtn('btnUpVet','vet');
+  setUpgradeBtn('btnUpSouvenir','souvenir');
+  setUpgradeBtn('btnUpMarketing','marketing');
+  const rt=document.getElementById('rosterTitle');
+  if(rt) rt.textContent=`Roster (${STATE.dinos.length}/${STATE.unlockedCages})`;
 }
 
 /* ============ RENDER: ROSTER ============ */
@@ -1083,7 +1496,10 @@ function renderDinos(){
   if(STATE.dinos.length===0){el.innerHTML='<div style="color:#888;font-size:12px;text-align:center;padding:10px;">No dinos yet — buy an egg!</div>';return;}
   STATE.dinos.forEach(d=>{
     const ab=d.ability?ABILITIES[d.ability]:null;
+    const levelCap=getLevelCap(d.rarity);
     const xpPct=Math.min(100,Math.floor(d.xp/xpForNext(d.level)*100));
+    const atCap=d.level>=levelCap;
+    const evoReady=isEvolutionReady(d);
     const armorText=d.armor?`<span style="color:#9cf;">[${ARMOR_TYPES[d.armor].name}]</span>`:'';
     const div=document.createElement('div'); div.className='card';
     div.innerHTML=`
@@ -1092,20 +1508,21 @@ function renderDinos(){
           ${getDinoSVG(d.name,38)}
           <div>
             <div class="name">${d.name} <span class="badge ${d.rarity}">${d.rarity}</span></div>
-            <div style="font-size:10px;color:#aaa;">L${d.level} ${armorText}</div>
+            <div style="font-size:10px;color:#aaa;">L${d.level}/${levelCap} ${armorText}</div>
             ${ab?`<div class="ability-tag">${ab.name} — ${ab.desc}</div>`:''}
           </div>
         </div>
       </div>
       <div class="xpbar"><div style="width:${xpPct}%"></div></div>
       <div class="mini-stat">HP <span>${fmt(d.hp)}/${fmt(d.hpMax)}</span> &nbsp; ATK <span>${effAtk(d)}</span> &nbsp; SPD <span>${d.spd}</span> &nbsp; RNG <span>${d.range}</span></div>
-      <div class="mini-stat">XP <span>${d.xp}/${xpForNext(d.level)}</span></div>
+      <div class="mini-stat">XP <span>${atCap?'MAX':`${d.xp}/${xpForNext(d.level)}`}</span>${evoReady?` &nbsp; <span style="color:#fc8;">Ready to evolve</span>`:''}</div>
       <div class="actions">
         <button onclick="feedDino(${d.id})">Feed (${5} food)</button>
         <button onclick="openArmorPicker(${d.id})">Armor</button>
         <button onclick="trainDino(${d.id})">Train L (${50*d.level}$)</button>
         <button onclick="trainSpeed(${d.id})">Spd (${40*d.level}$)</button>
         <button onclick="trainRange(${d.id})">Rng (${40*d.level}$)</button>
+        ${evoReady?`<button onclick="evolveCommonDino(${d.id})" style="background:linear-gradient(45deg,#7a5,#fc8);color:#111;font-weight:bold;">Evolve (250$)</button>`:''}
         <button onclick="sellDino(${d.id})" style="background:#6b2020;">Sell (${Math.floor(DINO_TYPES[d.rarity].cost*.5*d.level)}$)</button>
       </div>`;
     el.appendChild(div);
@@ -1173,15 +1590,33 @@ function renderPark(){
 
   // Cages
   cages.forEach((c,i)=>{
+    const isLocked=i>=STATE.unlockedCages;
     const dino=STATE.dinos[i]||null;
     const cage=document.createElement('div'); cage.className='cage';
+    if(isLocked) cage.classList.add('locked');
     cage.style.cssText=`left:${c.x}px;top:${c.y}px;width:${c.w}px;height:${c.h}px;`;
 
     const lbl=document.createElement('div'); lbl.className='cageLabel';
-    lbl.textContent=dino?`Cage ${i+1}: ${dino.name}`:`Cage ${i+1} (Empty)`;
+    lbl.textContent=isLocked?`Exhibit ${i+1}: LOCKED`:dino?`Exhibit ${i+1}: ${dino.name}`:`Exhibit ${i+1} (Empty)`;
     cage.appendChild(lbl);
 
-    if(!dino){
+    [[4,4],[4,c.h-12],[c.w-12,4],[c.w-12,c.h-12]].forEach(([px,py])=>{
+      const p=document.createElement('div');
+      p.className='cagePost';
+      p.style.left=px+'px';
+      p.style.top=py+'px';
+      cage.appendChild(p);
+    });
+
+    if(isLocked){
+      const lock=document.createElement('div');
+      lock.className='cageLock';
+      lock.textContent='🔒';
+      cage.appendChild(lock);
+      const emp=document.createElement('div'); emp.className='cageEmpty';
+      emp.textContent='Build an exhibit to unlock';
+      cage.appendChild(emp);
+    } else if(!dino){
       const emp=document.createElement('div'); emp.className='cageEmpty';
       emp.textContent='Buy an egg!';
       cage.appendChild(emp);
